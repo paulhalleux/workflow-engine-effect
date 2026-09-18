@@ -3,6 +3,7 @@ import { Schema } from "effect";
 import { WorkflowDefinitionId } from "./ids.ts";
 import { ParameterDefinition } from "./parameter-definition.ts";
 import { TransitionDefinition } from "./transition-definition.ts";
+import { TriggerDefinition } from "./trigger-definition.ts";
 import { WorkflowStepDefinition } from "./workflow-step-definition.ts";
 
 export const WorkflowDefinition = Schema.Struct({
@@ -14,6 +15,7 @@ export const WorkflowDefinition = Schema.Struct({
   latest: Schema.Boolean,
   inputs: Schema.Array(ParameterDefinition),
   outputs: Schema.Array(ParameterDefinition),
+  triggers: Schema.Array(TriggerDefinition),
   steps: Schema.Array(WorkflowStepDefinition),
   transitions: Schema.Array(TransitionDefinition),
 });

@@ -1,19 +1,27 @@
 import { Schema } from "effect";
 
-import { WorkflowStepDefinitionId } from "./ids.ts";
-import { ConditionId } from "./workflow-step-definition.ts";
+import { WorkflowStepDefinitionId, WorkflowStepOutputId } from "./ids.ts";
 
 /**
- * A transition between workflow steps.
+ * Identifies a source endpoint in the workflow graph.
  *
- * from: The ID of the step that the transition is coming from.
- * to: The ID of the step that the transition is going to.
- * conditionId: The ID of the condition in the source that must be met for the transition to occur. This is optional, as some transitions may not have any conditions.
+ * `output` is omitted for steps with an unconditional/default outgoing path
+ * and identifies a specific output for steps that expose multiple routes.
+ */
+export const WorkflowTransitionSource = Schema.Struct({
+  stepId: WorkflowStepDefinitionId,
+  output: Schema.optional(WorkflowStepOutputId),
+});
+export type WorkflowTransitionSource = typeof WorkflowTransitionSource.Type;
+
+/**
+ * Connects an output of one workflow step to another workflow step.
+ *
+ * Transitions describe graph topology only. Conditions and other execution
+ * semantics remain owned by the source step definition.
  */
 export const TransitionDefinition = Schema.Struct({
-  from: WorkflowStepDefinitionId,
+  from: WorkflowTransitionSource,
   to: WorkflowStepDefinitionId,
-  conditionId: Schema.optional(ConditionId),
 });
-
 export type TransitionDefinition = typeof TransitionDefinition.Type;

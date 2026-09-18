@@ -1,10 +1,10 @@
 import { Schema } from "effect";
 
-import { TaskId, WorkflowStepDefinitionId } from "./ids.ts";
+import { TaskId, WorkflowStepDefinitionId, WorkflowStepOutputId } from "./ids.ts";
 import { ValueExpression } from "./value-expression.ts";
 
 /**
- * Fields shared by every node in a workflow definition.
+ * Fields shared by every step in a workflow definition.
  */
 export const WorkflowStepDefinitionBase = Schema.Struct({
   id: WorkflowStepDefinitionId,
@@ -13,79 +13,79 @@ export const WorkflowStepDefinitionBase = Schema.Struct({
 });
 
 /**
- * Fields shared by workflow control-flow nodes.
+ * A control-flow step that forks execution into every outgoing transition.
  *
- * Control nodes are interpreted directly by the workflow engine and affect
- * graph traversal or synchronization rather than delegating executable work.
+ * The fork does not execute work itself. Once reached, all directly connected
+ * successor steps become eligible for execution.
  */
-export const ControlStepDefinitionBase = WorkflowStepDefinitionBase.pipe(
-  Schema.fieldsAssign({ _kind: Schema.Literal("control") }),
-);
-
-/**
- * Fields shared by executable workflow tasks.
- *
- * Task nodes represent work executed by a task implementation, whether that
- * implementation is built into the engine or registered externally.
- */
-export const TaskStepDefinitionBase = WorkflowStepDefinitionBase.pipe(
-  Schema.fieldsAssign({
-    _kind: Schema.Literal("task"),
-    inputs: Schema.Record(Schema.String, ValueExpression),
-  }),
-);
-
-/**
- * Fork control node.
- *
- * @remarks
- * Keep this node only if fork eventually carries explicit execution semantics.
- * Simple graph fan-out can otherwise be represented by multiple outgoing
- * transitions without an explicit fork node.
- */
-export const ForkStepDefinition = ControlStepDefinitionBase.pipe(
+export const ForkStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({ _type: Schema.Literal("fork") }),
 );
 export type ForkStepDefinition = typeof ForkStepDefinition.Type;
 
 /**
- * A branch that can be selected by a decision control node.
+ * Identifies how a decision selects its outgoing branches.
+ *
+ * - `firstMatch` selects the first matching branch in declaration order.
+ * - `allMatches` selects every matching branch.
  */
-export const ConditionId = Schema.String.pipe(Schema.brand("ConditionId"));
-export type ConditionId = typeof ConditionId.Type;
-export const ConditionDefinition = Schema.Struct({ id: ConditionId, condition: Schema.String });
-export type ConditionDefinition = typeof ConditionDefinition.Type;
+export const DecisionMode = Schema.Literals(["firstMatch", "allMatches"]);
+export type DecisionMode = typeof DecisionMode.Type;
 
 /**
- * Control node that evaluates conditions and selects an outgoing branch.
+ * A conditional output exposed by a decision step.
  */
-export const DecisionStepDefinition = ControlStepDefinitionBase.pipe(
+export const DecisionBranchDefinition = Schema.Struct({
+  output: WorkflowStepOutputId,
+  condition: Schema.String,
+});
+export type DecisionBranchDefinition = typeof DecisionBranchDefinition.Type;
+
+/**
+ * A control-flow step that selects one or more outputs by evaluating
+ * conditions.
+ *
+ * Branches are evaluated in declaration order. When no branch matches,
+ * `defaultOutput`, when provided, is selected.
+ *
+ * When `allowMultipleMatches` is true, all matching branches are selected.
+ * Otherwise, only the first matching branch is selected.
+ */
+export const DecisionStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({
     _type: Schema.Literal("decision"),
-    conditions: Schema.Array(ConditionDefinition),
-    /**
-     * If true, the decision node will only evaluate the first condition and
-     * take the corresponding branch. If false, it will evaluate all conditions
-     * and take all branches whose conditions are met (similarly to a fork node).
-     */
-    singleCondition: Schema.Boolean,
+    mode: DecisionMode,
+    branches: Schema.Array(DecisionBranchDefinition),
+    defaultOutput: Schema.optional(WorkflowStepOutputId),
+    allowMultipleMatches: Schema.optional(Schema.Boolean),
   }),
 );
 export type DecisionStepDefinition = typeof DecisionStepDefinition.Type;
 
 /**
- * Synchronization control node.
+ * Identifies how a join synchronizes its incoming execution branches.
+ *
+ * - `all` waits for every required incoming branch.
+ * - `any` continues as soon as one incoming branch completes.
  */
-export const JoinMode = Schema.Union([Schema.Literal("all"), Schema.Literal("any")]);
+export const JoinMode = Schema.Literals(["all", "any"]);
 export type JoinMode = typeof JoinMode.Type;
 
-export const JoinStepDefinition = ControlStepDefinitionBase.pipe(
+/**
+ * A control-flow step that synchronizes multiple incoming execution branches.
+ *
+ * The incoming branches themselves are defined by the workflow transitions.
+ */
+export const JoinStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({ _type: Schema.Literal("join"), mode: Schema.optional(JoinMode) }),
 );
 export type JoinStepDefinition = typeof JoinStepDefinition.Type;
 
 /**
- * Union of control-flow nodes understood directly by the workflow engine.
+ * A control-flow step interpreted directly by the workflow engine.
+ *
+ * Control steps alter graph traversal or synchronization and do not delegate
+ * executable work to the task registry.
  */
 export const ControlStepDefinition = Schema.Union([
   ForkStepDefinition,
@@ -95,46 +95,25 @@ export const ControlStepDefinition = Schema.Union([
 export type ControlStepDefinition = typeof ControlStepDefinition.Type;
 
 /**
- * Executable task backed by an agent task implementation.
+ * An executable workflow step.
  *
- * The referenced task may eventually be provided by a built-in implementation,
- * an extension, or a remote agent.
+ * `taskId` identifies an implementation in the task registry. A task
+ * implementation may be built into the engine, provided by an extension, or
+ * delegated to a remote agent without changing the workflow definition.
+ *
+ * Inputs are resolved by the workflow engine before the task is executed.
  */
-export const AgentTaskStepDefinition = TaskStepDefinitionBase.pipe(
-  Schema.fieldsAssign({ _type: Schema.Literal("agent"), taskId: TaskId }),
-);
-export type AgentTaskStepDefinition = typeof AgentTaskStepDefinition.Type;
-
-/**
- * Executable task that starts another workflow definition.
- */
-export const SubWorkflowStepDefinition = TaskStepDefinitionBase.pipe(
+export const TaskStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({
-    _type: Schema.Literal("subWorkflow"),
-    workflowDefinitionName: Schema.String,
-    /**
-     * Optional version of the workflow definition to execute. If not provided,
-     * the latest version will be used.
-     */
-    workflowDefinitionVersion: Schema.optional(Schema.String),
+    _type: Schema.Literal("task"),
+    taskId: TaskId,
+    inputs: Schema.Record(Schema.String, ValueExpression),
   }),
 );
-export type SubWorkflowStepDefinition = typeof SubWorkflowStepDefinition.Type;
-
-/**
- * Union of executable workflow tasks.
- *
- * Additional built-in task definitions such as HTTP and Script can be added to
- * this union without affecting the engine-owned control-flow model.
- */
-export const TaskStepDefinition = Schema.Union([
-  AgentTaskStepDefinition,
-  SubWorkflowStepDefinition,
-]);
 export type TaskStepDefinition = typeof TaskStepDefinition.Type;
 
 /**
- * Any node that can appear in a workflow graph.
+ * Any step that can appear in a workflow graph.
  */
 export const WorkflowStepDefinition = Schema.Union([ControlStepDefinition, TaskStepDefinition]);
 export type WorkflowStepDefinition = typeof WorkflowStepDefinition.Type;
