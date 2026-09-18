@@ -2,7 +2,9 @@
   "name": "root",
   "author": "HALLEUX, Paul",
   "scripts": {
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "dev:web": "pnpm --filter @workflow/web dev",
+    "generate:api": "pnpm --filter @workflow/web generate:api"
   },
   "devEngines": {
     "packageManager": {
