@@ -23,7 +23,7 @@ export const TriggerDefinitionBase = Schema.Struct({
  */
 export const ManualTriggerDefinition = TriggerDefinitionBase.pipe(
   Schema.fieldsAssign({ _type: Schema.Literal("manual") }),
-);
+).annotate({ identifier: "ManualTriggerDefinition" });
 export type ManualTriggerDefinition = typeof ManualTriggerDefinition.Type;
 
 /**
@@ -33,5 +33,7 @@ export type ManualTriggerDefinition = typeof ManualTriggerDefinition.Type;
  * as schedules, webhooks, Kafka subscriptions, or filesystem events can be
  * added to this union as their runtime implementations are introduced.
  */
-export const TriggerDefinition = ManualTriggerDefinition;
+export const TriggerDefinition = Schema.Union([ManualTriggerDefinition]).annotate({
+  identifier: "TriggerDefinition",
+});
 export type TriggerDefinition = typeof TriggerDefinition.Type;

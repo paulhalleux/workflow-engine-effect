@@ -20,7 +20,7 @@ export const WorkflowStepDefinitionBase = Schema.Struct({
  */
 export const ForkStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({ _type: Schema.Literal("fork") }),
-);
+).annotate({ identifier: "ForkStepDefinition" });
 export type ForkStepDefinition = typeof ForkStepDefinition.Type;
 
 /**
@@ -29,7 +29,9 @@ export type ForkStepDefinition = typeof ForkStepDefinition.Type;
  * - `firstMatch` selects the first matching branch in declaration order.
  * - `allMatches` selects every matching branch.
  */
-export const DecisionMode = Schema.Literals(["firstMatch", "allMatches"]);
+export const DecisionMode = Schema.Literals(["firstMatch", "allMatches"]).annotate({
+  identifier: "DecisionMode",
+});
 export type DecisionMode = typeof DecisionMode.Type;
 
 /**
@@ -38,7 +40,7 @@ export type DecisionMode = typeof DecisionMode.Type;
 export const DecisionBranchDefinition = Schema.Struct({
   output: WorkflowStepOutputId,
   condition: Schema.String,
-});
+}).annotate({ identifier: "DecisionBranchDefinition" });
 export type DecisionBranchDefinition = typeof DecisionBranchDefinition.Type;
 
 /**
@@ -59,7 +61,7 @@ export const DecisionStepDefinition = WorkflowStepDefinitionBase.pipe(
     defaultOutput: Schema.optional(WorkflowStepOutputId),
     allowMultipleMatches: Schema.optional(Schema.Boolean),
   }),
-);
+).annotate({ identifier: "DecisionStepDefinition" });
 export type DecisionStepDefinition = typeof DecisionStepDefinition.Type;
 
 /**
@@ -68,7 +70,7 @@ export type DecisionStepDefinition = typeof DecisionStepDefinition.Type;
  * - `all` waits for every required incoming branch.
  * - `any` continues as soon as one incoming branch completes.
  */
-export const JoinMode = Schema.Literals(["all", "any"]);
+export const JoinMode = Schema.Literals(["all", "any"]).annotate({ identifier: "JoinMode" });
 export type JoinMode = typeof JoinMode.Type;
 
 /**
@@ -78,7 +80,7 @@ export type JoinMode = typeof JoinMode.Type;
  */
 export const JoinStepDefinition = WorkflowStepDefinitionBase.pipe(
   Schema.fieldsAssign({ _type: Schema.Literal("join"), mode: Schema.optional(JoinMode) }),
-);
+).annotate({ identifier: "JoinStepDefinition" });
 export type JoinStepDefinition = typeof JoinStepDefinition.Type;
 
 /**
@@ -91,7 +93,7 @@ export const ControlStepDefinition = Schema.Union([
   ForkStepDefinition,
   DecisionStepDefinition,
   JoinStepDefinition,
-]);
+]).annotate({ identifier: "ControlStepDefinition" });
 export type ControlStepDefinition = typeof ControlStepDefinition.Type;
 
 /**
@@ -109,11 +111,14 @@ export const TaskStepDefinition = WorkflowStepDefinitionBase.pipe(
     taskId: TaskId,
     inputs: Schema.Record(Schema.String, ValueExpression),
   }),
-);
+).annotate({ identifier: "TaskStepDefinition" });
 export type TaskStepDefinition = typeof TaskStepDefinition.Type;
 
 /**
  * Any step that can appear in a workflow graph.
  */
-export const WorkflowStepDefinition = Schema.Union([ControlStepDefinition, TaskStepDefinition]);
+export const WorkflowStepDefinition = Schema.Union([
+  ControlStepDefinition,
+  TaskStepDefinition,
+]).annotate({ identifier: "WorkflowStepDefinition" });
 export type WorkflowStepDefinition = typeof WorkflowStepDefinition.Type;

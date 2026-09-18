@@ -6,7 +6,7 @@ export const DataType = Schema.Union([
   Schema.Literal("boolean"),
   Schema.Literal("array"),
   Schema.Literal("object"),
-]);
+]).annotate({ identifier: "DataType" });
 
 export type DataType = typeof DataType.Type;
 
@@ -15,6 +15,6 @@ export const ArrayItemType = Schema.Union([
   Schema.Literal("number"),
   Schema.Literal("boolean"),
   Schema.Literal("object"),
-]);
+]).annotate({ identifier: "ArrayItemType" });
 
 export type ArrayItemType = typeof ArrayItemType.Type;

@@ -1,6 +1,6 @@
 import { HttpApi, OpenApi } from "effect/unstable/httpapi";
 
-import { WorkflowDefinitionsApi } from "./workflow-definitions-api.ts";
+import { WorkflowDefinitionsApi } from "./workflow-definitions";
 
 /**
  * Workflow engine HTTP API.

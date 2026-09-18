@@ -133,14 +133,19 @@ export const makeWorkflowDefinitionRepositoryFile = (
        * @param directory - Directory to read.
        * @returns Directory entries.
        */
-      const readDirectoryOrEmpty = (
+      const readDirectory = (
         directory: string,
-      ): Effect.Effect<Array<string>, WorkflowDefinitionStorageError> =>
+      ): Effect.Effect<
+        Array<string>,
+        WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+      > =>
         fs
           .readDirectory(directory)
           .pipe(
-            Effect.catch((error) =>
-              isNotFound(error) ? Effect.succeed([]) : Effect.fail(toStorageError(error)),
+            Effect.mapError((error) =>
+              isNotFound(error)
+                ? new WorkflowDefinitionNotFound({ name: directory })
+                : toStorageError(error),
             ),
           );
 
@@ -152,11 +157,14 @@ export const makeWorkflowDefinitionRepositoryFile = (
        */
       const listByName = (
         name: string,
-      ): Effect.Effect<Array<WorkflowDefinition>, WorkflowDefinitionStorageError> =>
+      ): Effect.Effect<
+        Array<WorkflowDefinition>,
+        WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+      > =>
         Effect.gen(function* () {
           const directory = getDefinitionDirectory(name);
 
-          const entries = yield* readDirectoryOrEmpty(directory);
+          const entries = yield* readDirectory(directory);
 
           const files = entries.filter((entry) => entry.endsWith(".json"));
 
@@ -222,7 +230,6 @@ export const makeWorkflowDefinitionRepositoryFile = (
               .pipe(Effect.mapError(toStorageError));
 
             const filePath = getDefinitionPath(definition.name, definition.version);
-
             yield* fs
               .writeFileString(filePath, `${content}\n`, { flag: "wx" })
               .pipe(
@@ -238,14 +245,12 @@ export const makeWorkflowDefinitionRepositoryFile = (
 
             return definition;
           }),
-
         get: (name, version) => {
           if (version === undefined) {
             return getLatest(name);
           }
 
           const filePath = getDefinitionPath(name, version);
-
           return fs.readFileString(filePath).pipe(
             Effect.mapError((error) =>
               isNotFound(error)
@@ -257,22 +262,24 @@ export const makeWorkflowDefinitionRepositoryFile = (
             ),
           );
         },
-
         list: () =>
           Effect.gen(function* () {
-            const names = yield* readDirectoryOrEmpty(definitionsDirectory);
+            const names = yield* readDirectory(definitionsDirectory).pipe(
+              Effect.catchTag("WorkflowDefinitionNotFound", () => Effect.succeed([])),
+            );
 
-            const definitions = yield* Effect.forEach(names, listByName);
+            const definitions = yield* Effect.forEach(names, (name) =>
+              listByName(name).pipe(
+                Effect.catchTag("WorkflowDefinitionNotFound", () => Effect.succeed([])),
+              ),
+            );
 
             return definitions.flat().sort((a, b) => {
               const byName = a.name.localeCompare(b.name);
-
               return byName !== 0 ? byName : rcompare(a.version, b.version);
             });
           }),
-
         listByName,
-
         delete: (name, version) => {
           const filePath = getDefinitionPath(name, version);
           return fs

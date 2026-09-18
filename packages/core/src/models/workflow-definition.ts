@@ -15,6 +15,6 @@ export const WorkflowDefinition = Schema.Struct({
   triggers: Schema.Array(TriggerDefinition),
   steps: Schema.Array(WorkflowStepDefinition),
   transitions: Schema.Array(TransitionDefinition),
-});
+}).annotate({ identifier: "WorkflowDefinition" });
 
 export type WorkflowDefinition = typeof WorkflowDefinition.Type;

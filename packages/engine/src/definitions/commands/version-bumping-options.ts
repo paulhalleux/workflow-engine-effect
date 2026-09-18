@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 
-export const BumpType = Schema.Literals(["major", "minor", "patch"]);
+export const BumpType = Schema.Literals(["major", "minor", "patch"]).annotate({
+  identifier: "BumpType",
+});
+
 export type BumpType = typeof BumpType.Type;
 
 /**
@@ -9,6 +12,6 @@ export type BumpType = typeof BumpType.Type;
 export const VersionBumpingOptions = Schema.Struct({
   bump: BumpType,
   fromVersion: Schema.optional(Schema.String),
-});
+}).annotate({ identifier: "VersionBumpingOptions" });
 
 export type VersionBumpingOptions = typeof VersionBumpingOptions.Type;

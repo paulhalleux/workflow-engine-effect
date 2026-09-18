@@ -10,6 +10,6 @@ export const ParameterDefinition = Schema.Struct({
   format: Schema.optional(Schema.String),
   required: Schema.Boolean,
   default: Schema.optional(Schema.Any),
-});
+}).annotate({ identifier: "ParameterDefinition" });
 
 export type ParameterDefinition = typeof ParameterDefinition.Type;

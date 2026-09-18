@@ -11,7 +11,7 @@ import { WorkflowStepDefinitionId, WorkflowStepOutputId } from "./ids.ts";
 export const WorkflowTransitionSource = Schema.Struct({
   stepId: WorkflowStepDefinitionId,
   output: Schema.optional(WorkflowStepOutputId),
-});
+}).annotate({ identifier: "WorkflowTransitionSource" });
 export type WorkflowTransitionSource = typeof WorkflowTransitionSource.Type;
 
 /**
@@ -23,5 +23,5 @@ export type WorkflowTransitionSource = typeof WorkflowTransitionSource.Type;
 export const TransitionDefinition = Schema.Struct({
   from: WorkflowTransitionSource,
   to: WorkflowStepDefinitionId,
-});
+}).annotate({ identifier: "TransitionDefinition" });
 export type TransitionDefinition = typeof TransitionDefinition.Type;
