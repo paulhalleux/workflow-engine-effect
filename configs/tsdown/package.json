@@ -1,0 +1,26 @@
+{
+  "name": "@paulhalleux/tsdown-config",
+  "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "peerDependencies": {
+    "tsdown": ">=0.14.0"
+  },
+  "devDependencies": {
+    "@paulhalleux/tsconfig": "workspace:*",
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

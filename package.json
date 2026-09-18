@@ -1,0 +1,15 @@
+{
+  "name": "root",
+  "author": "HALLEUX, Paul",
+  "scripts": {
+    "build": "pnpm -r build"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.4.2",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.4.2"
+}
