@@ -11,9 +11,14 @@
     }
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "start": "tsx ./src/index.ts"
   },
   "dependencies": {
+    "@effect/platform-node": "rc",
+    "@workflow/api": "workspace:*",
+    "@workflow/core": "workspace:*",
+    "@workflow/engine": "workspace:*",
     "effect": "rc"
   },
   "devDependencies": {

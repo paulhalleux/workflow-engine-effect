@@ -1,9 +1,5 @@
 import { Schema } from "effect";
 
-// WorkflowDefinition
-export const WorkflowDefinitionId = Schema.String.pipe(Schema.brand("WorkflowDefinitionId"));
-export type WorkflowDefinitionId = typeof WorkflowDefinitionId.Type;
-
 // WorkflowStepDefinition
 export const WorkflowStepDefinitionId = Schema.String.pipe(
   Schema.brand("WorkflowStepDefinitionId"),

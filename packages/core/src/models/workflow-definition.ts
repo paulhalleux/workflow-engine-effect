@@ -1,13 +1,11 @@
 import { Schema } from "effect";
 
-import { WorkflowDefinitionId } from "./ids.ts";
 import { ParameterDefinition } from "./parameter-definition.ts";
 import { TransitionDefinition } from "./transition-definition.ts";
 import { TriggerDefinition } from "./trigger-definition.ts";
 import { WorkflowStepDefinition } from "./workflow-step-definition.ts";
 
 export const WorkflowDefinition = Schema.Struct({
-  id: WorkflowDefinitionId,
   name: Schema.String,
   description: Schema.optional(Schema.String),
   version: Schema.String,
