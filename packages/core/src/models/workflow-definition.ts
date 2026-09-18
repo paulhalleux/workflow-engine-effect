@@ -10,7 +10,6 @@ export const WorkflowDefinition = Schema.Struct({
   description: Schema.optional(Schema.String),
   version: Schema.String,
   tags: Schema.optional(Schema.Array(Schema.String)),
-  latest: Schema.Boolean,
   inputs: Schema.Array(ParameterDefinition),
   outputs: Schema.Array(ParameterDefinition),
   triggers: Schema.Array(TriggerDefinition),

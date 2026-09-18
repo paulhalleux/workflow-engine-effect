@@ -235,6 +235,8 @@ export const makeWorkflowDefinitionRepositoryFile = (
                     : toStorageError(error),
                 ),
               );
+
+            return definition;
           }),
 
         get: (name, version) => {

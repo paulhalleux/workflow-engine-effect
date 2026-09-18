@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@workflow/core": "workspace:*",
+    "@workflow/engine": "workspace:*",
     "effect": "rc"
   },
   "devDependencies": {

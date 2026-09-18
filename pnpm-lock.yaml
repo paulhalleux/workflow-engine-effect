@@ -274,6 +274,9 @@ importers:
       '@workflow/core':
         specifier: workspace:*
         version: link:../core
+      '@workflow/engine':
+        specifier: workspace:*
+        version: link:../engine
       effect:
         specifier: rc
         version: 4.0.0-rc.115

@@ -21,7 +21,10 @@ export class WorkflowDefinitionRepository extends Context.Service<
      */
     readonly create: (
       definition: WorkflowDefinition,
-    ) => Effect.Effect<void, WorkflowDefinitionAlreadyExists | WorkflowDefinitionStorageError>;
+    ) => Effect.Effect<
+      WorkflowDefinition,
+      WorkflowDefinitionAlreadyExists | WorkflowDefinitionStorageError
+    >;
 
     /**
      * Finds an exact workflow definition version.

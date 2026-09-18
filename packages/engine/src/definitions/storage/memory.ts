@@ -28,7 +28,7 @@ export const WorkflowDefinitionRepositoryMemory = Layer.effect(
         }).pipe(
           Effect.flatMap((created) =>
             created
-              ? Effect.succeed(undefined)
+              ? Effect.succeed(definition)
               : Effect.fail(
                   new WorkflowDefinitionAlreadyExists({
                     name: definition.name,

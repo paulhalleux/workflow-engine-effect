@@ -1,4 +1,9 @@
-import { Api, WorkflowDefinitionAlreadyExists, WorkflowDefinitionNotFound } from "@workflow/api";
+import {
+  Api,
+  WorkflowDefinitionAlreadyExists,
+  WorkflowDefinitionNotFound,
+  WorkflowDefinitionVersionBumpingError,
+} from "@workflow/api";
 import { WorkflowDefinitionService } from "@workflow/engine";
 import { Effect } from "effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
@@ -38,6 +43,41 @@ export const WorkflowDefinitionHandlers = HttpApiBuilder.group(
           Effect.catchTag("WorkflowDefinitionAlreadyExists", (error) =>
             Effect.fail(
               new WorkflowDefinitionAlreadyExists({ name: error.name, version: error.version }),
+            ),
+          ),
+          Effect.catchTag("WorkflowDefinitionVersionBumpingError", (error) =>
+            Effect.fail(
+              new WorkflowDefinitionVersionBumpingError({
+                message: error.message,
+                fromVersion: error.fromVersion,
+                bump: error.bump,
+                cause: error.cause,
+              }),
+            ),
+          ),
+          Effect.catchTag("WorkflowDefinitionStorageError", Effect.die),
+        ),
+
+      createVersion: ({ params, payload }) =>
+        definitions.createVersion(params.name, payload).pipe(
+          Effect.catchTag("WorkflowDefinitionNotFound", (error) =>
+            Effect.fail(
+              new WorkflowDefinitionNotFound({ name: error.name, version: error.version }),
+            ),
+          ),
+          Effect.catchTag("WorkflowDefinitionAlreadyExists", (error) =>
+            Effect.fail(
+              new WorkflowDefinitionAlreadyExists({ name: error.name, version: error.version }),
+            ),
+          ),
+          Effect.catchTag("WorkflowDefinitionVersionBumpingError", (error) =>
+            Effect.fail(
+              new WorkflowDefinitionVersionBumpingError({
+                message: error.message,
+                fromVersion: error.fromVersion,
+                bump: error.bump,
+                cause: error.cause,
+              }),
             ),
           ),
           Effect.catchTag("WorkflowDefinitionStorageError", Effect.die),

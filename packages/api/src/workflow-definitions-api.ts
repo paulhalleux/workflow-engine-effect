@@ -1,4 +1,5 @@
-import { WorkflowDefinition } from "@workflow/core";
+import { WorkflowDefinitionEntry } from "@workflow/core";
+import { CreateWorkflowDefinition, VersionBumpingOptions } from "@workflow/engine";
 import { Schema } from "effect";
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi";
 
@@ -21,33 +22,54 @@ export class WorkflowDefinitionAlreadyExists extends Schema.TaggedError<Workflow
   { httpApiStatus: 409 },
 ) {}
 
-const CreatedWorkflowDefinition = WorkflowDefinition.pipe(HttpApiSchema.status(201));
+export class WorkflowDefinitionVersionBumpingError extends Schema.TaggedError<WorkflowDefinitionVersionBumpingError>()(
+  "WorkflowDefinitionVersionBumpingError",
+  {
+    message: Schema.String,
+    fromVersion: Schema.optional(Schema.String),
+    bump: Schema.Literals(["major", "minor", "patch"]),
+    cause: Schema.Defect(),
+  },
+  { httpApiStatus: 400 },
+) {}
+
+const CreatedWorkflowDefinition = WorkflowDefinitionEntry.pipe(HttpApiSchema.status(201));
 
 /**
  * HTTP API for managing workflow definitions.
  */
 export class WorkflowDefinitionsApi extends HttpApiGroup.make("workflowDefinitions")
   .add(
-    HttpApiEndpoint.get("list", "/", { success: Schema.Array(WorkflowDefinition) }),
+    HttpApiEndpoint.get("list", "/", { success: Schema.Array(WorkflowDefinitionEntry) }),
     HttpApiEndpoint.get("listByName", "/:name", {
       params: { name: Schema.String },
-      success: Schema.Array(WorkflowDefinition),
+      success: Schema.Array(WorkflowDefinitionEntry),
       error: WorkflowDefinitionNotFound,
     }),
     HttpApiEndpoint.get("get", "/:name/v/:version", {
       params: { name: Schema.String, version: Schema.String },
-      success: WorkflowDefinition,
+      success: WorkflowDefinitionEntry,
       error: WorkflowDefinitionNotFound,
     }),
     HttpApiEndpoint.post("create", "/", {
-      payload: WorkflowDefinition,
+      payload: CreateWorkflowDefinition,
       success: CreatedWorkflowDefinition,
-      error: WorkflowDefinitionAlreadyExists,
+      error: Schema.Union([WorkflowDefinitionAlreadyExists, WorkflowDefinitionVersionBumpingError]),
     }),
     HttpApiEndpoint.delete("delete", "/:name/v/:version", {
       params: { name: Schema.String, version: Schema.String },
       success: Schema.Void,
       error: WorkflowDefinitionNotFound,
+    }),
+    HttpApiEndpoint.post("createVersion", "/:name/version", {
+      params: { name: Schema.String },
+      payload: VersionBumpingOptions,
+      success: CreatedWorkflowDefinition,
+      error: Schema.Union([
+        WorkflowDefinitionNotFound,
+        WorkflowDefinitionAlreadyExists,
+        WorkflowDefinitionVersionBumpingError,
+      ]),
     }),
   )
   .prefix("/workflow-definitions")
