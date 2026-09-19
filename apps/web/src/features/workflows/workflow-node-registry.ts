@@ -1,4 +1,4 @@
-import { GitFork, Merge, Route, TerminalSquare, type LucideIcon } from "lucide-react";
+import { Merge, Route, Split, TerminalSquare, type LucideIcon } from "lucide-react";
 
 import type { StepType, WorkflowDefinition, WorkflowStep } from "@/domain/workflow";
 
@@ -86,7 +86,7 @@ export const workflowNodeRegistry = {
   },
   fork: {
     accent: "violet",
-    icon: GitFork,
+    icon: Split,
     label: "Fork",
     present: (_step, context) => ({
       detail: "parallel paths",
@@ -155,7 +155,7 @@ export function createNodePresentation(
 
 export function getWorkflowNodeHeight(presentation: WorkflowNodePresentation) {
   const portRows = Math.max(presentation.inputs.length, presentation.outputs.length, 1);
-  return 153 + portRows * 20;
+  return 154 + portRows * 20;
 }
 
 function flowInputs(stepIds: readonly string[]): WorkflowNodePort[] {

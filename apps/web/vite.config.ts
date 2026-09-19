@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? "http://localhost:3000";
 
 export default defineConfig({
   plugins: [react()],
@@ -16,7 +17,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/workflow-definitions": "http://localhost:3000",
+      "/workflow-definitions": apiProxyTarget,
+      "/workflow-executions": apiProxyTarget,
     },
   },
   build: {

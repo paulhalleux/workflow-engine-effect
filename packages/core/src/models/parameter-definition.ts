@@ -9,7 +9,7 @@ export const ParameterDefinition = Schema.Struct({
   arrayItemType: Schema.optional(ArrayItemType),
   format: Schema.optional(Schema.String),
   required: Schema.Boolean,
-  default: Schema.optional(Schema.Any),
+  default: Schema.optional(Schema.Json),
 }).annotate({ identifier: "ParameterDefinition" });
 
 export type ParameterDefinition = typeof ParameterDefinition.Type;

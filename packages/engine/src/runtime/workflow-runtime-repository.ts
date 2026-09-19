@@ -48,6 +48,12 @@ export class WorkflowRuntimeRepository extends Context.Service<
       instance: WorkflowInstance,
     ) => Effect.Effect<void, WorkflowRuntimeStorageError>;
 
+    /** Lists every workflow instance in the runtime store. */
+    readonly listInstances: Effect.Effect<
+      ReadonlyArray<WorkflowInstance>,
+      WorkflowRuntimeStorageError
+    >;
+
     /**
      * Persists a newly created workflow step instance.
      *
@@ -116,5 +122,10 @@ export class WorkflowRuntimeRepository extends Context.Service<
       WorkflowTaskAttempt,
       WorkflowTaskAttemptNotFoundError | WorkflowRuntimeStorageError
     >;
+
+    /** Lists task attempts belonging to one workflow step instance. */
+    readonly listTaskAttempts: (
+      workflowStepInstanceId: WorkflowStepInstanceId,
+    ) => Effect.Effect<ReadonlyArray<WorkflowTaskAttempt>, WorkflowRuntimeStorageError>;
   }
 >()("@workflow/engine/WorkflowRuntimeRepository") {}

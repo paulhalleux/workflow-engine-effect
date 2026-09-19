@@ -1,4 +1,4 @@
-import { Boxes, ChevronRight, GitBranch, Search, X } from "lucide-react";
+import { Boxes, ChevronRight, ListTree, Search, Workflow, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ export function WorkflowSidebar({ groups, selected, onSelect, onClose }: Workflo
     <aside className="sidebar" aria-label="Workflow browser">
       <div className="sidebar__brand">
         <div className="brand-mark" aria-hidden="true">
-          <GitBranch size={18} />
+          <Workflow size={18} />
         </div>
         <div>
           <strong>Orchestra</strong>
@@ -102,7 +102,7 @@ function WorkflowListItem({
       onClick={selectWorkflow}
     >
       <span className="workflow-list__glyph">
-        <GitBranch size={15} />
+        <ListTree size={15} />
       </span>
       <span className="workflow-list__content">
         <strong>{formatName(group.name)}</strong>

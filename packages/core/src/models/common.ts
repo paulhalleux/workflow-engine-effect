@@ -18,3 +18,9 @@ export const ArrayItemType = Schema.Union([
 ]).annotate({ identifier: "ArrayItemType" });
 
 export type ArrayItemType = typeof ArrayItemType.Type;
+
+/** JSON-safe object used at HTTP and persistence boundaries. */
+export const JsonRecord = Schema.Record(Schema.String, Schema.Json).annotate({
+  identifier: "JsonRecord",
+});
+export type JsonRecord = typeof JsonRecord.Type;

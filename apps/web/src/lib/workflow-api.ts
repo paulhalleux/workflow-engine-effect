@@ -1,27 +1,11 @@
-import createClient from "openapi-fetch";
-
-import type { paths } from "@/api/schema";
-
-const client = createClient<paths>({
-  baseUrl: import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "",
-});
-
-export class WorkflowApiError extends Error {
-  constructor(
-    message: string,
-    readonly status?: number,
-  ) {
-    super(message);
-    this.name = "WorkflowApiError";
-  }
-}
+import { ApiError, apiClient } from "@/lib/api-client";
 
 export async function listWorkflowDefinitions(signal?: AbortSignal) {
   try {
-    const result = await client.GET("/workflow-definitions", { signal });
+    const result = await apiClient.GET("/workflow-definitions", { signal });
 
     if (!result.response.ok) {
-      throw new WorkflowApiError(
+      throw new ApiError(
         `The workflow API returned ${result.response.status}.`,
         result.response.status,
       );
@@ -30,7 +14,7 @@ export async function listWorkflowDefinitions(signal?: AbortSignal) {
     return result.data ?? [];
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    if (error instanceof WorkflowApiError) throw error;
-    throw new WorkflowApiError("The workflow API could not be reached.");
+    if (error instanceof ApiError) throw error;
+    throw new ApiError("The workflow API could not be reached.");
   }
 }

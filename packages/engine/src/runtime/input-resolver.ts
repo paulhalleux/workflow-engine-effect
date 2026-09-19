@@ -1,4 +1,5 @@
 import {
+  JsonRecord,
   ParameterDefinition,
   TaskStepDefinition,
   ValueExpression,
@@ -28,7 +29,7 @@ export const resolveValueExpression = (
   inputName: string,
   expression: ValueExpression,
   context: ValueExpressionContext,
-): Effect.Effect<unknown, ValueExpressionResolutionError> => {
+): Effect.Effect<JsonRecord[string], ValueExpressionResolutionError> => {
   switch (expression._type) {
     case "Literal":
       return Effect.succeed(expression.value);
@@ -43,7 +44,7 @@ export const resolveValueExpression = (
         );
       }
 
-      return Effect.succeed(context.workflow.input[expression.name]);
+      return Effect.succeed(context.workflow.input[expression.name]!);
     }
 
     case "TaskOutput": {
@@ -69,9 +70,9 @@ export const resolveValueExpression = (
 
 const resolvePath = (
   inputName: string,
-  value: unknown,
+  value: JsonRecord[string],
   path: ReadonlyArray<string>,
-): Effect.Effect<unknown, ValueExpressionResolutionError> => {
+): Effect.Effect<JsonRecord[string], ValueExpressionResolutionError> => {
   let current = value;
 
   for (const segment of path) {
@@ -84,7 +85,7 @@ const resolvePath = (
       );
     }
 
-    current = (current as Record<string, unknown>)[segment];
+    current = (current as JsonRecord)[segment]!;
   }
 
   return Effect.succeed(current);
@@ -100,7 +101,7 @@ const resolvePath = (
 export const resolveTaskInput = (
   step: TaskStepDefinition,
   context: ValueExpressionContext,
-): Effect.Effect<Readonly<Record<string, unknown>>, ValueExpressionResolutionError> => {
+): Effect.Effect<JsonRecord, ValueExpressionResolutionError> => {
   return Effect.forEach(Object.entries(step.inputs), ([name, expression]) => {
     return resolveValueExpression(name, expression, context).pipe(
       Effect.map((value) => [name, value] as const),
@@ -120,8 +121,8 @@ export const resolveTaskInput = (
  */
 export const resolveWorkflowInput = (
   parameters: ReadonlyArray<ParameterDefinition>,
-  input: Readonly<Record<string, unknown>>,
-): Effect.Effect<Readonly<Record<string, unknown>>, WorkflowInputResolutionError> => {
+  input: JsonRecord,
+): Effect.Effect<JsonRecord, WorkflowInputResolutionError> => {
   return Effect.forEach(parameters, (parameter) => {
     if (!Object.hasOwn(input, parameter.name)) {
       if (parameter.default !== undefined) {
@@ -129,7 +130,7 @@ export const resolveWorkflowInput = (
       }
 
       if (!parameter.required) {
-        return Effect.succeed([parameter.name, undefined] as const);
+        return Effect.succeed(undefined);
       }
 
       return Effect.fail(
@@ -142,5 +143,8 @@ export const resolveWorkflowInput = (
 
     const value = input[parameter.name];
     return Effect.succeed([parameter.name, value] as const);
-  }).pipe(Effect.map(Object.fromEntries));
+  }).pipe(
+    Effect.map((entries) => entries.filter((entry) => entry !== undefined)),
+    Effect.map(Object.fromEntries),
+  );
 };

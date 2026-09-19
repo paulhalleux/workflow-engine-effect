@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { JsonRecord } from "./common.ts";
 import { WorkflowInstanceId } from "./ids.ts";
 import { WorkflowExecutionFailure } from "./workflow-execution-failure.ts";
 import { WorkflowInstanceTrigger } from "./workflow-instance-trigger.ts";
@@ -21,8 +22,8 @@ export const WorkflowInstance = Schema.Struct({
   workflowDefinitionName: Schema.String,
   workflowDefinitionVersion: Schema.String,
   trigger: Schema.optional(WorkflowInstanceTrigger),
-  input: Schema.Record(Schema.String, Schema.Unknown),
-  output: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+  input: JsonRecord,
+  output: Schema.optional(JsonRecord),
   status: WorkflowInstanceStatus,
   createdAt: Schema.DateTimeUtc,
   startedAt: Schema.optional(Schema.DateTimeUtc),

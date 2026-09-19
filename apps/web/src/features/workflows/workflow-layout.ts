@@ -1,7 +1,7 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
 
-import type { WorkflowDefinition, WorkflowStep } from "@/domain/workflow";
+import type { WorkflowDefinition, WorkflowExecutionDetails, WorkflowStep } from "@/domain/workflow";
 
 import {
   createNodePresentation,
@@ -14,11 +14,15 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   isEntry: boolean;
   isTerminal: boolean;
   presentation: WorkflowNodePresentation;
+  runtimeStatus?: WorkflowExecutionDetails["steps"][number]["status"];
 }
 
 export const WORKFLOW_NODE_WIDTH = 292;
 
-export function createWorkflowGraph(workflow: WorkflowDefinition): {
+export function createWorkflowGraph(
+  workflow: WorkflowDefinition,
+  execution?: WorkflowExecutionDetails,
+): {
   nodes: Node<WorkflowNodeData>[];
   edges: Edge[];
 } {
@@ -77,6 +81,7 @@ export function createWorkflowGraph(workflow: WorkflowDefinition): {
         isEntry: !incoming.has(step.id),
         isTerminal: !outgoing.has(step.id),
         presentation,
+        runtimeStatus: execution?.steps.find((instance) => instance.stepId === step.id)?.status,
       },
     };
   });
@@ -89,8 +94,8 @@ export function createWorkflowGraph(workflow: WorkflowDefinition): {
     targetHandle: "control-in",
     label: transition.from.output,
     type: "smoothstep",
-    markerEnd: { type: "arrowclosed", width: 18, height: 18, color: "#53675e" },
-    style: { stroke: "#53675e", strokeWidth: 1.5 },
+    markerEnd: { type: "arrowclosed", width: 18, height: 18, color: "var(--edge-control)" },
+    style: { stroke: "var(--edge-control)", strokeWidth: 1.5 },
     labelStyle: { fontSize: 11, fontWeight: 650 },
     labelBgPadding: [7, 4],
     labelBgBorderRadius: 7,
@@ -103,9 +108,9 @@ export function createWorkflowGraph(workflow: WorkflowDefinition): {
     target: dependency.target,
     targetHandle: `data-in:${dependency.input}`,
     type: "bezier",
-    markerEnd: { type: "arrowclosed", width: 15, height: 15, color: "#68a8d8" },
+    markerEnd: { type: "arrowclosed", width: 15, height: 15, color: "var(--edge-data)" },
     style: {
-      stroke: "#68a8d8",
+      stroke: "var(--edge-data)",
       strokeDasharray: "4 5",
       strokeWidth: 1.25,
     },

@@ -1,21 +1,39 @@
-import { AlertCircle, Braces, GitBranch, Menu, RefreshCw, Sparkles } from "lucide-react";
-import { startTransition, useEffect, useState } from "react";
+import { AlertCircle, Braces, Menu, Play, RefreshCw, Workflow as WorkflowIcon } from "lucide-react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsIndicator, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { WorkflowDefinition } from "@/domain/workflow";
+import { RunWorkflowDialog } from "@/features/executions/run-workflow-dialog";
+import { WorkflowLivePanel } from "@/features/executions/workflow-live-panel";
 import { WorkflowCanvas } from "@/features/workflows/workflow-canvas";
 import { WorkflowInspector } from "@/features/workflows/workflow-inspector";
 import { WorkflowSidebar } from "@/features/workflows/workflow-sidebar";
+import {
+  useStartWorkflow,
+  useWorkflowExecution,
+  useWorkflowExecutions,
+} from "@/hooks/use-workflow-executions";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { groupWorkflows } from "@/lib/workflow-groups";
 
+type WorkspaceView = "definition" | "live";
+
 export function App() {
   const workflows = useWorkflows();
-  const groups = groupWorkflows(workflows.data);
+  const groups = useMemo(() => groupWorkflows(workflows.data), [workflows.data]);
   const [selected, setSelected] = useState<WorkflowDefinition>();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
+  const [view, setView] = useState<WorkspaceView>("definition");
+  const [activeExecutionId, setActiveExecutionId] = useState<string>();
+
+  const executions = useWorkflowExecutions(selected?.name ?? "", selected?.version ?? "");
+  const activeExecution = useWorkflowExecution(activeExecutionId);
+  const startExecution = useStartWorkflow();
 
   useEffect(() => {
     if (workflows.status !== "success") return;
@@ -29,12 +47,18 @@ export function App() {
       }
       return groups[0]?.latest;
     });
-  }, [workflows.status, workflows.data]);
+  }, [groups, workflows.data, workflows.status]);
+
+  useEffect(() => {
+    if (view !== "live" || activeExecutionId || !executions.data?.items[0]) return;
+    setActiveExecutionId(executions.data.items[0].id);
+  }, [activeExecutionId, executions.data, view]);
 
   const selectWorkflow = (workflow: WorkflowDefinition) => {
     startTransition(() => {
       setSelected(workflow);
       setSelectedNodeId(null);
+      setActiveExecutionId(undefined);
       setSidebarOpen(false);
     });
   };
@@ -52,6 +76,7 @@ export function App() {
 
   const selectedGroup = groups.find((group) => group.name === selected.name);
   const selectedStep = selected.steps.find((step) => step.id === selectedNodeId);
+  const recentExecutions = executions.data?.items ?? [];
 
   return (
     <div className="app-shell">
@@ -81,16 +106,29 @@ export function App() {
           </Button>
           <div className="workspace-header__title">
             <div className="workspace-header__eyebrow">
-              <GitBranch size={12} /> Definition library <span>/</span> {selected.name}
+              <WorkflowIcon size={12} /> Workflows <span>/</span> {selected.name}
             </div>
             <h1>{formatName(selected.name)}</h1>
           </div>
-          <div className="workspace-header__meta">
-            {selected.latest && (
-              <span className="latest-pill">
-                <Sparkles size={12} /> Latest
-              </span>
-            )}
+
+          <Tabs
+            className="workspace-tabs"
+            value={view}
+            onValueChange={(value) => setView(value as WorkspaceView)}
+          >
+            <TabsList className="workspace-tabs__list">
+              <TabsTrigger className="workspace-tabs__trigger" value="definition">
+                Definition
+              </TabsTrigger>
+              <TabsTrigger className="workspace-tabs__trigger" value="live">
+                Runs
+                {recentExecutions.length > 0 && <span>{recentExecutions.length}</span>}
+              </TabsTrigger>
+              <TabsIndicator className="workspace-tabs__indicator" />
+            </TabsList>
+          </Tabs>
+
+          <div className="workspace-header__actions">
             <label className="version-select">
               <span className="sr-only">Workflow version</span>
               <select
@@ -104,7 +142,7 @@ export function App() {
               >
                 {selectedGroup?.versions.map((version) => (
                   <option key={version.version} value={version.version}>
-                    v{version.version}
+                    {version.version}
                   </option>
                 ))}
               </select>
@@ -115,16 +153,20 @@ export function App() {
                 <span className="sr-only">Refresh definitions</span>
               </Button>
             </Tooltip>
+            <Button onClick={() => setRunDialogOpen(true)}>
+              <Play size={14} /> Run workflow
+            </Button>
           </div>
         </header>
 
         <section className="workflow-toolbar" aria-label="Workflow summary">
           <p>{selected.description ?? "No description provided for this workflow."}</p>
           <div>
+            {selected.latest && <Badge variant="success">Latest</Badge>}
             {(selected.tags ?? []).map((tag) => (
-              <span className="tag" key={tag}>
-                #{tag}
-              </span>
+              <Badge variant="muted" key={tag}>
+                {tag}
+              </Badge>
             ))}
             <span className="summary-stat">
               <Braces size={13} />
@@ -134,14 +176,51 @@ export function App() {
         </section>
 
         <div className="workspace-body">
-          <WorkflowCanvas workflow={selected} onSelectNode={setSelectedNodeId} />
-          <WorkflowInspector
-            step={selectedStep}
+          <WorkflowCanvas
+            execution={view === "live" ? activeExecution.data : undefined}
             workflow={selected}
-            onCloseStep={() => setSelectedNodeId(null)}
+            onSelectNode={setSelectedNodeId}
           />
+          {view === "live" ? (
+            <WorkflowLivePanel
+              execution={activeExecution.data}
+              executions={recentExecutions}
+              isFetching={activeExecution.isFetching || executions.isFetching}
+              selectedId={activeExecutionId}
+              onSelect={setActiveExecutionId}
+            />
+          ) : (
+            <WorkflowInspector
+              step={selectedStep}
+              workflow={selected}
+              onCloseStep={() => setSelectedNodeId(null)}
+            />
+          )}
         </div>
       </main>
+
+      <RunWorkflowDialog
+        error={startExecution.error}
+        isPending={startExecution.isPending}
+        open={runDialogOpen}
+        workflow={selected}
+        onOpenChange={(open) => {
+          setRunDialogOpen(open);
+          if (!open) startExecution.reset();
+        }}
+        onSubmit={(input) =>
+          startExecution.mutate(
+            { name: selected.name, version: selected.version, input },
+            {
+              onSuccess: (instance) => {
+                setActiveExecutionId(instance.id);
+                setView("live");
+                setRunDialogOpen(false);
+              },
+            },
+          )
+        }
+      />
     </div>
   );
 }
@@ -150,12 +229,12 @@ function LoadingScreen() {
   return (
     <main className="loading-screen">
       <div className="brand-mark brand-mark--large">
-        <GitBranch size={23} />
+        <WorkflowIcon size={23} />
       </div>
       <div className="loading-line">
         <span />
       </div>
-      <p>Mapping workflow definitions</p>
+      <p>Loading workflow workspace</p>
     </main>
   );
 }
@@ -180,9 +259,9 @@ function EmptyScreen({ onRefresh }: { onRefresh: () => void }) {
   return (
     <main className="fatal-error">
       <div className="fatal-error__icon">
-        <GitBranch size={24} />
+        <WorkflowIcon size={24} />
       </div>
-      <p className="eyebrow">Definition library</p>
+      <p className="eyebrow">Workflow catalog</p>
       <h1>No workflows found.</h1>
       <p>Create a workflow definition through the API and refresh the explorer.</p>
       <Button onClick={onRefresh}>

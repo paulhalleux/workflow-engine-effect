@@ -6,8 +6,8 @@ import {
   WorkflowDefinitionRepositoryFile,
   WorkflowDefinitionServiceLive,
   WorkflowExecutionService,
-  WorkflowRuntimeRepositoryMemory,
   WorkflowQueue,
+  WorkflowRuntimeRepositoryMemory,
 } from "@workflow/engine";
 import { Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
@@ -18,7 +18,22 @@ import { WorkflowExecutionHandlers } from "./http/workflow-executions.ts";
 import { ServerTaskRegistryLive } from "./tasks.ts";
 import { WorkflowWorkerLive } from "./workflow-worker.ts";
 
+const WorkflowDefinitionServicesLive = WorkflowDefinitionServiceLive.pipe(
+  Layer.provideMerge(WorkflowDefinitionRepositoryFile),
+);
+
 const WorkflowQueueLive = WorkflowQueue.memory(1);
+
+const WorkflowExecutionDependenciesLive = Layer.mergeAll(
+  WorkflowDefinitionServicesLive,
+  WorkflowRuntimeRepositoryMemory,
+  ServerTaskRegistryLive,
+  WorkflowQueueLive,
+);
+
+const WorkflowEngineLive = WorkflowExecutionService.layer.pipe(
+  Layer.provideMerge(WorkflowExecutionDependenciesLive),
+);
 
 const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide(WorkflowDefinitionHandlers),
@@ -30,15 +45,8 @@ const HttpRoutes = Layer.mergeAll(ApiRoutes, Docs);
 
 const ApplicationLive = HttpRouter.serve(HttpRoutes).pipe(
   Layer.provide(WorkflowWorkerLive),
-  Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 })),
-  Layer.provide(WorkflowDefinitionHandlers),
-  Layer.provide(WorkflowExecutionHandlers),
-  Layer.provide(WorkflowExecutionService.layer),
-  Layer.provide(WorkflowRuntimeRepositoryMemory),
-  Layer.provide(ServerTaskRegistryLive),
-  Layer.provide(WorkflowDefinitionServiceLive),
-  Layer.provide(WorkflowDefinitionRepositoryFile),
-  Layer.provide(WorkflowQueueLive),
+  Layer.provide(WorkflowEngineLive),
+  Layer.provide(NodeHttpServer.layer(createServer, { port: Number(process.env.PORT ?? 3000) })),
 );
 
 const MainLive = ApplicationLive.pipe(Layer.provideMerge(NodeServices.layer));

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "dev": "vite",
-    "generate:api": "openapi-typescript http://localhost:3000/openapi.json -o src/api/schema.ts && oxfmt src/api/schema.ts --write",
+    "generate:api": "openapi-typescript ${OPENAPI_URL:-http://localhost:3000/openapi.json} -o src/api/schema.ts && oxfmt src/api/schema.ts --write",
     "test": "vitest run",
     "typecheck": "tsc -b --pretty false"
   },

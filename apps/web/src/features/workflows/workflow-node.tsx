@@ -8,7 +8,7 @@ import type { WorkflowNodeData } from "./workflow-layout";
 type HandleKind = "branch" | "data" | "none";
 
 export function WorkflowNode({ data, selected }: NodeProps) {
-  const { step, isEntry, isTerminal, presentation } = data as WorkflowNodeData;
+  const { step, isEntry, isTerminal, presentation, runtimeStatus } = data as WorkflowNodeData;
   const Icon = presentation.icon;
 
   return (
@@ -17,6 +17,7 @@ export function WorkflowNode({ data, selected }: NodeProps) {
         "workflow-node",
         `workflow-node--${step._type}`,
         `workflow-node--${presentation.accent}`,
+        runtimeStatus && `workflow-node--status-${runtimeStatus.toLowerCase()}`,
         selected && "is-selected",
       )}
     >
@@ -34,6 +35,7 @@ export function WorkflowNode({ data, selected }: NodeProps) {
           <Icon size={16} strokeWidth={1.8} />
         </span>
         <span className="workflow-node__type">{presentation.label}</span>
+        {runtimeStatus && <span className="workflow-node__runtime-status">{runtimeStatus}</span>}
         {isEntry && <span className="workflow-node__marker">Start</span>}
         {isTerminal && <span className="workflow-node__marker">End</span>}
       </header>

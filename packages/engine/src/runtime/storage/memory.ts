@@ -58,6 +58,10 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
           return [undefined, { ...current, instances: next }] as const;
         }),
 
+      listInstances: Ref.get(state).pipe(
+        Effect.map((current) => Array.from(current.instances.values())),
+      ),
+
       createStepInstance: (instance) =>
         Ref.modify(state, (current) => {
           const next = new Map(current.steps);
@@ -119,6 +123,15 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
             }
             return Effect.succeed(attempt);
           }),
+        ),
+
+      listTaskAttempts: (workflowStepInstanceId) =>
+        Ref.get(state).pipe(
+          Effect.map((current) =>
+            Array.from(current.attempts.values()).filter(
+              (attempt) => attempt.workflowStepInstanceId === workflowStepInstanceId,
+            ),
+          ),
         ),
     });
   }),

@@ -1,7 +1,7 @@
-import { Braces, Check, CircleDot, GitBranch, Info, KeyRound, X } from "lucide-react";
-import { Tabs } from "@base-ui/react/tabs";
+import { Braces, Check, CircleDot, Info, KeyRound, Route, Workflow, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsIndicator, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { WorkflowDefinition, WorkflowStep } from "@/domain/workflow";
 
 interface WorkflowInspectorProps {
@@ -40,7 +40,7 @@ function WorkflowDetails({ workflow }: { workflow: WorkflowDefinition }) {
     <div className="inspector__content">
       <section className="inspector__summary">
         <span className="inspector__summary-icon">
-          <GitBranch size={17} />
+          <Workflow size={17} />
         </span>
         <div>
           <strong>{workflow.name}</strong>
@@ -100,24 +100,24 @@ function StepDetails({ step, workflow }: { step: WorkflowStep; workflow: Workflo
     step._type === "task" ? "Parameters" : step._type === "decision" ? "Routes" : "Connections";
 
   return (
-    <Tabs.Root className="inspector-tabs" defaultValue="overview">
-      <Tabs.List className="inspector-tabs__list">
-        <Tabs.Tab className="inspector-tabs__tab" value="overview">
+    <Tabs className="inspector-tabs" defaultValue="overview">
+      <TabsList className="inspector-tabs__list">
+        <TabsTrigger className="inspector-tabs__tab" value="overview">
           Overview
-        </Tabs.Tab>
-        <Tabs.Tab className="inspector-tabs__tab" value="details">
+        </TabsTrigger>
+        <TabsTrigger className="inspector-tabs__tab" value="details">
           {detailsLabel}
-        </Tabs.Tab>
-        <Tabs.Indicator className="inspector-tabs__indicator" />
-      </Tabs.List>
+        </TabsTrigger>
+        <TabsIndicator className="inspector-tabs__indicator" />
+      </TabsList>
 
-      <Tabs.Panel className="inspector__content inspector-tabs__panel" value="overview">
+      <TabsContent className="inspector__content inspector-tabs__panel" value="overview">
         <StepOverview step={step} />
-      </Tabs.Panel>
-      <Tabs.Panel className="inspector__content inspector-tabs__panel" value="details">
+      </TabsContent>
+      <TabsContent className="inspector__content inspector-tabs__panel" value="details">
         <StepParameters step={step} workflow={workflow} />
-      </Tabs.Panel>
-    </Tabs.Root>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -193,7 +193,7 @@ function StepParameters({ step, workflow }: { step: WorkflowStep; workflow: Work
 
   if (step._type === "decision") {
     return (
-      <InspectorSection icon={GitBranch} title="Ordered routing rules">
+      <InspectorSection icon={Route} title="Ordered routing rules">
         {step.branches.map((branch, index) => (
           <div className="binding" key={branch.output}>
             <div>
@@ -223,7 +223,7 @@ function StepParameters({ step, workflow }: { step: WorkflowStep; workflow: Work
   const outgoing = workflow.transitions.filter((transition) => transition.from.stepId === step.id);
   return (
     <>
-      <InspectorSection icon={GitBranch} title={`Incoming · ${incoming.length}`}>
+      <InspectorSection icon={Route} title={`Incoming · ${incoming.length}`}>
         {incoming.map((transition) => (
           <ConnectionRow
             key={`${transition.from.stepId}-${transition.to}`}
@@ -231,7 +231,7 @@ function StepParameters({ step, workflow }: { step: WorkflowStep; workflow: Work
           />
         ))}
       </InspectorSection>
-      <InspectorSection icon={GitBranch} title={`Outgoing · ${outgoing.length}`}>
+      <InspectorSection icon={Route} title={`Outgoing · ${outgoing.length}`}>
         {outgoing.map((transition) => (
           <ConnectionRow key={`${transition.from.stepId}-${transition.to}`} value={transition.to} />
         ))}

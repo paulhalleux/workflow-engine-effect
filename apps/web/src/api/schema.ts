@@ -68,30 +68,358 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/workflow-executions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["workflowExecutions.list"];
+    put?: never;
+    post: operations["workflowExecutions.start"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workflow-executions/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["workflowExecutions.get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    WorkflowDefinitionNotFoundEncoded: {
+    /** @enum {string} */
+    DataType: "string" | "number" | "boolean" | "array" | "object";
+    /** @enum {string} */
+    ArrayItemType: "string" | "number" | "boolean" | "object";
+    ParameterDefinition: {
+      name: string;
+      description?: string | null;
+      dataType: components["schemas"]["DataType"];
+      arrayItemType?: components["schemas"]["ArrayItemType"] | null;
+      format?: string | null;
+      required: boolean;
+      default?: unknown | null;
+    };
+    ManualTriggerDefinition: {
+      id: string;
+      name: string;
+      description?: string | null;
       /** @enum {string} */
-      _tag: "WorkflowDefinitionNotFound";
+      _type: "manual";
+    };
+    TriggerDefinition: components["schemas"]["ManualTriggerDefinition"];
+    ForkStepDefinition: {
+      id: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      _type: "fork";
+    };
+    /** @enum {string} */
+    DecisionMode: "firstMatch" | "allMatches";
+    DecisionBranchDefinition: {
+      output: string;
+      condition: string;
+    };
+    DecisionStepDefinition: {
+      id: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      _type: "decision";
+      mode: components["schemas"]["DecisionMode"];
+      branches: components["schemas"]["DecisionBranchDefinition"][];
+      defaultOutput?: string | null;
+      allowMultipleMatches?: boolean | null;
+    };
+    /** @enum {string} */
+    JoinMode: "all" | "any";
+    JoinStepDefinition: {
+      id: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      _type: "join";
+      mode?: components["schemas"]["JoinMode"] | null;
+    };
+    ControlStepDefinition:
+      | components["schemas"]["ForkStepDefinition"]
+      | components["schemas"]["DecisionStepDefinition"]
+      | components["schemas"]["JoinStepDefinition"];
+    LiteralExpression: {
+      /** @enum {string} */
+      _type: "Literal";
+      value: unknown;
+    };
+    WorkflowInputExpression: {
+      /** @enum {string} */
+      _type: "WorkflowInput";
+      name: string;
+    };
+    TaskOutputExpression: {
+      /** @enum {string} */
+      _type: "TaskOutput";
+      stepId: string;
+      path: string[];
+    };
+    ValueExpression:
+      | components["schemas"]["LiteralExpression"]
+      | components["schemas"]["WorkflowInputExpression"]
+      | components["schemas"]["TaskOutputExpression"];
+    TaskRetryDefinition: {
+      maxAttempts: number;
+      delayMs: number | ("Infinity" | "-Infinity" | "NaN");
+    };
+    TaskStepDefinition: {
+      id: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      _type: "task";
+      taskId: string;
+      inputs: {
+        [key: string]: components["schemas"]["ValueExpression"];
+      };
+      retry?: components["schemas"]["TaskRetryDefinition"] | null;
+    };
+    WorkflowStepDefinition:
+      | components["schemas"]["ControlStepDefinition"]
+      | components["schemas"]["TaskStepDefinition"];
+    WorkflowTransitionSource: {
+      stepId: string;
+      output?: string | null;
+    };
+    TransitionDefinition: {
+      from: components["schemas"]["WorkflowTransitionSource"];
+      to: string;
+    };
+    WorkflowDefinitionEntry: {
+      name: string;
+      description?: string | null;
+      version: string;
+      tags?: string[] | null;
+      inputs: components["schemas"]["ParameterDefinition"][];
+      outputs: components["schemas"]["ParameterDefinition"][];
+      triggers: components["schemas"]["TriggerDefinition"][];
+      steps: components["schemas"]["WorkflowStepDefinition"][];
+      transitions: components["schemas"]["TransitionDefinition"][];
+      latest: boolean;
+    };
+    WorkflowDefinitionNotFoundProblem: {
+      /** @enum {string} */
+      type: "urn:workflow-engine:problem:workflow-definition-not-found";
+      /** @enum {string} */
+      title: "Workflow definition not found";
+      /** @enum {number} */
+      status: 404;
+      detail?: string | null;
+      /** @enum {string} */
+      code: "WORKFLOW_DEFINITION_NOT_FOUND";
       name: string;
       version?: string | null;
     };
-    WorkflowDefinitionAlreadyExistsEncoded: {
+    WorkflowDefinition: {
+      name: string;
+      description?: string | null;
+      version: string;
+      tags?: string[] | null;
+      inputs: components["schemas"]["ParameterDefinition"][];
+      outputs: components["schemas"]["ParameterDefinition"][];
+      triggers: components["schemas"]["TriggerDefinition"][];
+      steps: components["schemas"]["WorkflowStepDefinition"][];
+      transitions: components["schemas"]["TransitionDefinition"][];
+    };
+    CreateVersionedWorkflowDefinition: {
+      definition: components["schemas"]["WorkflowDefinition"];
+    };
+    /** @enum {string} */
+    BumpType: "major" | "minor" | "patch";
+    VersionBumpingOptions: {
+      bump: components["schemas"]["BumpType"];
+      fromVersion?: string | null;
+    };
+    CreateBumpedWorkflowDefinition: {
+      definition: {
+        name: string;
+        description?: string | null;
+        tags?: string[] | null;
+        inputs: components["schemas"]["ParameterDefinition"][];
+        outputs: components["schemas"]["ParameterDefinition"][];
+        triggers: components["schemas"]["TriggerDefinition"][];
+        steps: components["schemas"]["WorkflowStepDefinition"][];
+        transitions: components["schemas"]["TransitionDefinition"][];
+      };
+      versioning: components["schemas"]["VersionBumpingOptions"];
+    };
+    CreateWorkflowDefinition:
+      | components["schemas"]["CreateVersionedWorkflowDefinition"]
+      | components["schemas"]["CreateBumpedWorkflowDefinition"];
+    CreatedWorkflowDefinition: {
+      name: string;
+      description?: string | null;
+      version: string;
+      tags?: string[] | null;
+      inputs: components["schemas"]["ParameterDefinition"][];
+      outputs: components["schemas"]["ParameterDefinition"][];
+      triggers: components["schemas"]["TriggerDefinition"][];
+      steps: components["schemas"]["WorkflowStepDefinition"][];
+      transitions: components["schemas"]["TransitionDefinition"][];
+      latest: boolean;
+    };
+    WorkflowDefinitionAlreadyExistsProblem: {
       /** @enum {string} */
-      _tag: "WorkflowDefinitionAlreadyExists";
+      type: "urn:workflow-engine:problem:workflow-definition-already-exists";
+      /** @enum {string} */
+      title: "Workflow definition already exists";
+      /** @enum {number} */
+      status: 409;
+      detail?: string | null;
+      /** @enum {string} */
+      code: "WORKFLOW_DEFINITION_ALREADY_EXISTS";
       name: string;
       version: string;
     };
-    WorkflowDefinitionVersionBumpingErrorEncoded: {
+    WorkflowDefinitionVersionBumpingErrorProblem: {
       /** @enum {string} */
-      _tag: "WorkflowDefinitionVersionBumpingError";
+      type: "urn:workflow-engine:problem:workflow-definition-version-bumping-error";
+      /** @enum {string} */
+      title: "Workflow definition version bumping error";
+      /** @enum {number} */
+      status: 400;
+      detail?: string | null;
+      /** @enum {string} */
+      code: "WORKFLOW_DEFINITION_VERSION_BUMPING_ERROR";
       message: string;
       fromVersion?: string | null;
       /** @enum {string} */
       bump: "major" | "minor" | "patch";
       cause: unknown;
+    };
+    WorkflowInstanceTrigger: {
+      triggerId: string;
+      type: string;
+      payload: unknown;
+    };
+    JsonRecord: Record<string, never>;
+    WorkflowInstanceStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Cancelled";
+    WorkflowExecutionFailure: {
+      message: string;
+      code?: string | null;
+      details?: unknown | null;
+    };
+    WorkflowInstance: {
+      id: string;
+      workflowDefinitionName: string;
+      workflowDefinitionVersion: string;
+      trigger?: components["schemas"]["WorkflowInstanceTrigger"] | null;
+      input: components["schemas"]["JsonRecord"];
+      output?: components["schemas"]["JsonRecord"] | null;
+      status: components["schemas"]["WorkflowInstanceStatus"];
+      createdAt: string;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      failure?: components["schemas"]["WorkflowExecutionFailure"] | null;
+    };
+    WorkflowExecutionPage: {
+      items: components["schemas"]["WorkflowInstance"][];
+      nextCursor?: string | null;
+    };
+    WorkflowStepInstanceStatus:
+      | "Pending"
+      | "Running"
+      | "WaitingRetry"
+      | "Succeeded"
+      | "Failed"
+      | "Cancelled";
+    WorkflowStepInstance: {
+      id: string;
+      workflowInstanceId: string;
+      stepId: string;
+      status: components["schemas"]["WorkflowStepInstanceStatus"];
+      input: components["schemas"]["JsonRecord"];
+      output?: components["schemas"]["JsonRecord"] | null;
+      createdAt: string;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      failure?: components["schemas"]["WorkflowExecutionFailure"] | null;
+    };
+    WorkflowTaskAttemptStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Cancelled";
+    WorkflowTaskAttempt: {
+      id: string;
+      workflowStepInstanceId: string;
+      number: number;
+      status: components["schemas"]["WorkflowTaskAttemptStatus"];
+      output?: components["schemas"]["JsonRecord"] | null;
+      createdAt: string;
+      scheduledAt: string;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      failure?: components["schemas"]["WorkflowExecutionFailure"] | null;
+    };
+    WorkflowExecutionDetails: {
+      instance: components["schemas"]["WorkflowInstance"];
+      steps: components["schemas"]["WorkflowStepInstance"][];
+      attempts: components["schemas"]["WorkflowTaskAttempt"][];
+    };
+    WorkflowExecutionNotFoundProblem: {
+      /** @enum {string} */
+      type: "urn:workflow-engine:problem:workflow-execution-not-found";
+      /** @enum {string} */
+      title: "Workflow execution not found";
+      /** @enum {number} */
+      status: 404;
+      detail?: string | null;
+      /** @enum {string} */
+      code: "WORKFLOW_EXECUTION_NOT_FOUND";
+      id: string;
+    };
+    StartWorkflow: {
+      name: string;
+      version: string;
+      input: components["schemas"]["JsonRecord"];
+      trigger?: components["schemas"]["WorkflowInstanceTrigger"] | null;
+    };
+    StartedWorkflowInstance: {
+      id: string;
+      workflowDefinitionName: string;
+      workflowDefinitionVersion: string;
+      trigger?: components["schemas"]["WorkflowInstanceTrigger"] | null;
+      input: components["schemas"]["JsonRecord"];
+      output?: components["schemas"]["JsonRecord"] | null;
+      status: components["schemas"]["WorkflowInstanceStatus"];
+      createdAt: string;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      failure?: components["schemas"]["WorkflowExecutionFailure"] | null;
+    };
+    WorkflowExecutionRejectedProblem: {
+      /** @enum {string} */
+      type: "urn:workflow-engine:problem:workflow-execution-rejected";
+      /** @enum {string} */
+      title: "Workflow execution rejected";
+      /** @enum {number} */
+      status: 400;
+      detail?: string | null;
+      /** @enum {string} */
+      code: "WORKFLOW_EXECUTION_REJECTED";
+      field?: string | null;
     };
   };
   responses: never;
@@ -117,108 +445,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            name: string;
-            description?: string | null;
-            version: string;
-            tags?: string[] | null;
-            inputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            outputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            triggers: {
-              id: string;
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              _type: "manual";
-            }[];
-            steps: (
-              | (
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "fork";
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "decision";
-                      /** @enum {string} */
-                      mode: "firstMatch" | "allMatches";
-                      branches: {
-                        output: string;
-                        condition: string;
-                      }[];
-                      defaultOutput?: string | null;
-                      allowMultipleMatches?: boolean | null;
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "join";
-                      mode?: ("all" | "any") | null;
-                    }
-                )
-              | {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "task";
-                  taskId: string;
-                  inputs: {
-                    [key: string]:
-                      | {
-                          /** @enum {string} */
-                          _type: "Literal";
-                          value: unknown;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "WorkflowInput";
-                          name: string;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "TaskOutput";
-                          stepId: string;
-                          path: string[];
-                        };
-                  };
-                }
-            )[];
-            transitions: {
-              from: {
-                stepId: string;
-                output?: string | null;
-              };
-              to: string;
-            }[];
-            latest: boolean;
-          }[];
+          "application/json": components["schemas"]["WorkflowDefinitionEntry"][];
         };
       };
     };
@@ -232,328 +459,17 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json":
-          | {
-              definition: {
-                name: string;
-                description?: string | null;
-                version: string;
-                tags?: string[] | null;
-                inputs: {
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  dataType: "string" | "number" | "boolean" | "array" | "object";
-                  arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-                  format?: string | null;
-                  required: boolean;
-                  default?: unknown | null;
-                }[];
-                outputs: {
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  dataType: "string" | "number" | "boolean" | "array" | "object";
-                  arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-                  format?: string | null;
-                  required: boolean;
-                  default?: unknown | null;
-                }[];
-                triggers: {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "manual";
-                }[];
-                steps: (
-                  | (
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "fork";
-                        }
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "decision";
-                          /** @enum {string} */
-                          mode: "firstMatch" | "allMatches";
-                          branches: {
-                            output: string;
-                            condition: string;
-                          }[];
-                          defaultOutput?: string | null;
-                          allowMultipleMatches?: boolean | null;
-                        }
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "join";
-                          mode?: ("all" | "any") | null;
-                        }
-                    )
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "task";
-                      taskId: string;
-                      inputs: {
-                        [key: string]:
-                          | {
-                              /** @enum {string} */
-                              _type: "Literal";
-                              value: unknown;
-                            }
-                          | {
-                              /** @enum {string} */
-                              _type: "WorkflowInput";
-                              name: string;
-                            }
-                          | {
-                              /** @enum {string} */
-                              _type: "TaskOutput";
-                              stepId: string;
-                              path: string[];
-                            };
-                      };
-                    }
-                )[];
-                transitions: {
-                  from: {
-                    stepId: string;
-                    output?: string | null;
-                  };
-                  to: string;
-                }[];
-              };
-            }
-          | {
-              definition: {
-                name: string;
-                description?: string | null;
-                tags?: string[] | null;
-                inputs: {
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  dataType: "string" | "number" | "boolean" | "array" | "object";
-                  arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-                  format?: string | null;
-                  required: boolean;
-                  default?: unknown | null;
-                }[];
-                outputs: {
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  dataType: "string" | "number" | "boolean" | "array" | "object";
-                  arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-                  format?: string | null;
-                  required: boolean;
-                  default?: unknown | null;
-                }[];
-                triggers: {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "manual";
-                }[];
-                steps: (
-                  | (
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "fork";
-                        }
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "decision";
-                          /** @enum {string} */
-                          mode: "firstMatch" | "allMatches";
-                          branches: {
-                            output: string;
-                            condition: string;
-                          }[];
-                          defaultOutput?: string | null;
-                          allowMultipleMatches?: boolean | null;
-                        }
-                      | {
-                          id: string;
-                          name: string;
-                          description?: string | null;
-                          /** @enum {string} */
-                          _type: "join";
-                          mode?: ("all" | "any") | null;
-                        }
-                    )
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "task";
-                      taskId: string;
-                      inputs: {
-                        [key: string]:
-                          | {
-                              /** @enum {string} */
-                              _type: "Literal";
-                              value: unknown;
-                            }
-                          | {
-                              /** @enum {string} */
-                              _type: "WorkflowInput";
-                              name: string;
-                            }
-                          | {
-                              /** @enum {string} */
-                              _type: "TaskOutput";
-                              stepId: string;
-                              path: string[];
-                            };
-                      };
-                    }
-                )[];
-                transitions: {
-                  from: {
-                    stepId: string;
-                    output?: string | null;
-                  };
-                  to: string;
-                }[];
-              };
-              versioning: {
-                /** @enum {string} */
-                bump: "major" | "minor" | "patch";
-                fromVersion?: string | null;
-              };
-            };
+        "application/json": components["schemas"]["CreateWorkflowDefinition"];
       };
     };
     responses: {
-      /** @description Success */
+      /** @description CreatedWorkflowDefinition */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            name: string;
-            description?: string | null;
-            version: string;
-            tags?: string[] | null;
-            inputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            outputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            triggers: {
-              id: string;
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              _type: "manual";
-            }[];
-            steps: (
-              | (
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "fork";
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "decision";
-                      /** @enum {string} */
-                      mode: "firstMatch" | "allMatches";
-                      branches: {
-                        output: string;
-                        condition: string;
-                      }[];
-                      defaultOutput?: string | null;
-                      allowMultipleMatches?: boolean | null;
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "join";
-                      mode?: ("all" | "any") | null;
-                    }
-                )
-              | {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "task";
-                  taskId: string;
-                  inputs: {
-                    [key: string]:
-                      | {
-                          /** @enum {string} */
-                          _type: "Literal";
-                          value: unknown;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "WorkflowInput";
-                          name: string;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "TaskOutput";
-                          stepId: string;
-                          path: string[];
-                        };
-                  };
-                }
-            )[];
-            transitions: {
-              from: {
-                stepId: string;
-                output?: string | null;
-              };
-              to: string;
-            }[];
-            latest: boolean;
-          };
+          "application/json": components["schemas"]["CreatedWorkflowDefinition"];
         };
       };
       /** @description Error */
@@ -563,8 +479,8 @@ export interface operations {
         };
         content: {
           "application/json":
-            | components["schemas"]["WorkflowDefinitionAlreadyExistsEncoded"]
-            | components["schemas"]["WorkflowDefinitionVersionBumpingErrorEncoded"];
+            | components["schemas"]["WorkflowDefinitionAlreadyExistsProblem"]
+            | components["schemas"]["WorkflowDefinitionVersionBumpingErrorProblem"];
         };
       };
     };
@@ -586,117 +502,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            name: string;
-            description?: string | null;
-            version: string;
-            tags?: string[] | null;
-            inputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            outputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            triggers: {
-              id: string;
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              _type: "manual";
-            }[];
-            steps: (
-              | (
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "fork";
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "decision";
-                      /** @enum {string} */
-                      mode: "firstMatch" | "allMatches";
-                      branches: {
-                        output: string;
-                        condition: string;
-                      }[];
-                      defaultOutput?: string | null;
-                      allowMultipleMatches?: boolean | null;
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "join";
-                      mode?: ("all" | "any") | null;
-                    }
-                )
-              | {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "task";
-                  taskId: string;
-                  inputs: {
-                    [key: string]:
-                      | {
-                          /** @enum {string} */
-                          _type: "Literal";
-                          value: unknown;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "WorkflowInput";
-                          name: string;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "TaskOutput";
-                          stepId: string;
-                          path: string[];
-                        };
-                  };
-                }
-            )[];
-            transitions: {
-              from: {
-                stepId: string;
-                output?: string | null;
-              };
-              to: string;
-            }[];
-            latest: boolean;
-          }[];
+          "application/json": components["schemas"]["WorkflowDefinitionEntry"][];
         };
       };
-      /** @description WorkflowDefinitionNotFound */
+      /** @description WorkflowDefinitionNotFoundProblem */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["WorkflowDefinitionNotFoundEncoded"];
+          "application/problem+json": components["schemas"]["WorkflowDefinitionNotFoundProblem"];
         };
       };
     };
@@ -713,123 +528,22 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Success */
+      /** @description WorkflowDefinitionEntry */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            name: string;
-            description?: string | null;
-            version: string;
-            tags?: string[] | null;
-            inputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            outputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            triggers: {
-              id: string;
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              _type: "manual";
-            }[];
-            steps: (
-              | (
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "fork";
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "decision";
-                      /** @enum {string} */
-                      mode: "firstMatch" | "allMatches";
-                      branches: {
-                        output: string;
-                        condition: string;
-                      }[];
-                      defaultOutput?: string | null;
-                      allowMultipleMatches?: boolean | null;
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "join";
-                      mode?: ("all" | "any") | null;
-                    }
-                )
-              | {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "task";
-                  taskId: string;
-                  inputs: {
-                    [key: string]:
-                      | {
-                          /** @enum {string} */
-                          _type: "Literal";
-                          value: unknown;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "WorkflowInput";
-                          name: string;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "TaskOutput";
-                          stepId: string;
-                          path: string[];
-                        };
-                  };
-                }
-            )[];
-            transitions: {
-              from: {
-                stepId: string;
-                output?: string | null;
-              };
-              to: string;
-            }[];
-            latest: boolean;
-          };
+          "application/json": components["schemas"]["WorkflowDefinitionEntry"];
         };
       };
-      /** @description WorkflowDefinitionNotFound */
+      /** @description WorkflowDefinitionNotFoundProblem */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["WorkflowDefinitionNotFoundEncoded"];
+          "application/problem+json": components["schemas"]["WorkflowDefinitionNotFoundProblem"];
         };
       };
     };
@@ -853,13 +567,13 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description WorkflowDefinitionNotFound */
+      /** @description WorkflowDefinitionNotFoundProblem */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["WorkflowDefinitionNotFoundEncoded"];
+          "application/problem+json": components["schemas"]["WorkflowDefinitionNotFoundProblem"];
         };
       };
     };
@@ -875,122 +589,17 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": {
-          /** @enum {string} */
-          bump: "major" | "minor" | "patch";
-          fromVersion?: string | null;
-        };
+        "application/json": components["schemas"]["VersionBumpingOptions"];
       };
     };
     responses: {
-      /** @description Success */
+      /** @description CreatedWorkflowDefinition */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            name: string;
-            description?: string | null;
-            version: string;
-            tags?: string[] | null;
-            inputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            outputs: {
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              dataType: "string" | "number" | "boolean" | "array" | "object";
-              arrayItemType?: ("string" | "number" | "boolean" | "object") | null;
-              format?: string | null;
-              required: boolean;
-              default?: unknown | null;
-            }[];
-            triggers: {
-              id: string;
-              name: string;
-              description?: string | null;
-              /** @enum {string} */
-              _type: "manual";
-            }[];
-            steps: (
-              | (
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "fork";
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "decision";
-                      /** @enum {string} */
-                      mode: "firstMatch" | "allMatches";
-                      branches: {
-                        output: string;
-                        condition: string;
-                      }[];
-                      defaultOutput?: string | null;
-                      allowMultipleMatches?: boolean | null;
-                    }
-                  | {
-                      id: string;
-                      name: string;
-                      description?: string | null;
-                      /** @enum {string} */
-                      _type: "join";
-                      mode?: ("all" | "any") | null;
-                    }
-                )
-              | {
-                  id: string;
-                  name: string;
-                  description?: string | null;
-                  /** @enum {string} */
-                  _type: "task";
-                  taskId: string;
-                  inputs: {
-                    [key: string]:
-                      | {
-                          /** @enum {string} */
-                          _type: "Literal";
-                          value: unknown;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "WorkflowInput";
-                          name: string;
-                        }
-                      | {
-                          /** @enum {string} */
-                          _type: "TaskOutput";
-                          stepId: string;
-                          path: string[];
-                        };
-                  };
-                }
-            )[];
-            transitions: {
-              from: {
-                stepId: string;
-                output?: string | null;
-              };
-              to: string;
-            }[];
-            latest: boolean;
-          };
+          "application/json": components["schemas"]["CreatedWorkflowDefinition"];
         };
       };
       /** @description Error */
@@ -1000,9 +609,99 @@ export interface operations {
         };
         content: {
           "application/json":
-            | components["schemas"]["WorkflowDefinitionNotFoundEncoded"]
-            | components["schemas"]["WorkflowDefinitionAlreadyExistsEncoded"]
-            | components["schemas"]["WorkflowDefinitionVersionBumpingErrorEncoded"];
+            | components["schemas"]["WorkflowDefinitionNotFoundProblem"]
+            | components["schemas"]["WorkflowDefinitionAlreadyExistsProblem"]
+            | components["schemas"]["WorkflowDefinitionVersionBumpingErrorProblem"];
+        };
+      };
+    };
+  };
+  "workflowExecutions.list": {
+    parameters: {
+      query?: {
+        name?: string | null;
+        cursor?: string | null;
+        limit?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description WorkflowExecutionPage */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowExecutionPage"];
+        };
+      };
+    };
+  };
+  "workflowExecutions.start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartWorkflow"];
+      };
+    };
+    responses: {
+      /** @description StartedWorkflowInstance */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StartedWorkflowInstance"];
+        };
+      };
+      /** @description Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | components["schemas"]["WorkflowDefinitionNotFoundProblem"]
+            | components["schemas"]["WorkflowExecutionRejectedProblem"];
+        };
+      };
+    };
+  };
+  "workflowExecutions.get": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description WorkflowExecutionDetails */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowExecutionDetails"];
+        };
+      };
+      /** @description WorkflowExecutionNotFoundProblem */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["WorkflowExecutionNotFoundProblem"];
         };
       };
     };

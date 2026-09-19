@@ -1,6 +1,8 @@
 import {
   TaskStepDefinition,
   WorkflowDefinition,
+  WorkflowExecutionDetails,
+  WorkflowExecutionPage,
   WorkflowInstance,
   WorkflowInstanceId,
   WorkflowInstanceStatusEnum,
@@ -11,7 +13,7 @@ import {
   WorkflowTaskAttemptId,
   WorkflowTaskAttemptStatusEnum,
 } from "@workflow/core";
-import { Context, Crypto, DateTime, Duration, Effect, Layer } from "effect";
+import { Cause, Context, Crypto, DateTime, Duration, Effect, Layer } from "effect";
 
 import {
   WorkflowDefinitionNotFoundError,
@@ -38,6 +40,22 @@ import { WorkflowRuntimeRepository } from "./workflow-runtime-repository.ts";
 export class WorkflowExecutionService extends Context.Service<
   WorkflowExecutionService,
   {
+    /** Lists workflow executions in reverse creation order. */
+    readonly listWorkflows: (options?: {
+      readonly name?: string;
+      readonly version?: string;
+      readonly cursor?: string;
+      readonly limit?: number;
+    }) => Effect.Effect<WorkflowExecutionPage, WorkflowRuntimeStorageError>;
+
+    /** Returns one execution with its persisted steps and attempts. */
+    readonly getWorkflow: (
+      id: WorkflowInstanceId,
+    ) => Effect.Effect<
+      WorkflowExecutionDetails,
+      WorkflowInstanceNotFoundError | WorkflowRuntimeStorageError
+    >;
+
     /**
      * Starts a workflow execution.
      *
@@ -90,7 +108,6 @@ export class WorkflowExecutionService extends Context.Service<
       const runtimeRepository = yield* WorkflowRuntimeRepository;
       const taskRegistry = yield* TaskRegistry;
       const workflowQueue = yield* WorkflowQueue;
-
       const crypto = yield* Crypto.Crypto;
 
       const makeWorkflowStepInstanceId = crypto.randomUUIDv7.pipe(
@@ -459,7 +476,92 @@ export class WorkflowExecutionService extends Context.Service<
           }
         });
 
+      const executeWorkflow = (workflowInstanceId: WorkflowInstanceId) =>
+        Effect.gen(function* () {
+          const workflow = yield* runtimeRepository.getInstance(workflowInstanceId);
+
+          if (workflow.status !== WorkflowInstanceStatusEnum.Pending) {
+            return;
+          }
+
+          const startedAt = yield* DateTime.now;
+
+          yield* runtimeRepository.updateInstance({
+            ...workflow,
+            status: WorkflowInstanceStatusEnum.Running,
+            startedAt,
+          });
+
+          yield* Effect.logInfo("Workflow started").pipe(
+            Effect.annotateLogs({
+              workflowInstanceId: workflow.id,
+              workflowDefinitionName: workflow.workflowDefinitionName,
+              workflowDefinitionVersion: workflow.workflowDefinitionVersion,
+            }),
+          );
+
+          yield* advanceWorkflow(workflow.id);
+        }).pipe(
+          Effect.tapCause((cause) =>
+            runtimeRepository.getInstance(workflowInstanceId).pipe(
+              Effect.flatMap((workflow) =>
+                DateTime.now.pipe(
+                  Effect.flatMap((completedAt) =>
+                    runtimeRepository.updateInstance({
+                      ...workflow,
+                      status: WorkflowInstanceStatusEnum.Failed,
+                      completedAt,
+                      failure: {
+                        message: "Workflow execution failed unexpectedly.",
+                        code: "WORKFLOW_EXECUTION_CRASHED",
+                        details: Cause.pretty(cause),
+                      },
+                    }),
+                  ),
+                ),
+              ),
+              Effect.ignore,
+            ),
+          ),
+        );
+
       return WorkflowExecutionService.of({
+        listWorkflows: (options = {}) =>
+          runtimeRepository.listInstances.pipe(
+            Effect.map((instances) => {
+              const filtered = instances.filter(
+                (instance) =>
+                  (options.name === undefined ||
+                    instance.workflowDefinitionName === options.name) &&
+                  (options.version === undefined ||
+                    instance.workflowDefinitionVersion === options.version),
+              );
+              const sorted = [...filtered].sort((left, right) =>
+                String(right.id).localeCompare(String(left.id)),
+              );
+              const cursorIndex = options.cursor
+                ? sorted.findIndex((instance) => instance.id === options.cursor)
+                : -1;
+              const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+              const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+              const items = sorted.slice(start, start + limit);
+              const hasMore = start + items.length < sorted.length;
+
+              return { items, nextCursor: hasMore ? items.at(-1)?.id : undefined };
+            }),
+          ),
+
+        getWorkflow: (id) =>
+          Effect.gen(function* () {
+            const instance = yield* runtimeRepository.getInstance(id);
+            const steps = yield* runtimeRepository.listStepInstances(id);
+            const attempts = yield* Effect.forEach(steps, (step) =>
+              runtimeRepository.listTaskAttempts(step.id),
+            );
+
+            return { instance, steps, attempts: attempts.flat() };
+          }),
+
         startWorkflow: (command) =>
           Effect.gen(function* () {
             const definition = yield* workflowDefService.get(command.name, command.version);
@@ -489,32 +591,7 @@ export class WorkflowExecutionService extends Context.Service<
 
             return workflow;
           }),
-        executeWorkflow: (workflowInstanceId) =>
-          Effect.gen(function* () {
-            const workflow = yield* runtimeRepository.getInstance(workflowInstanceId);
-
-            if (workflow.status !== WorkflowInstanceStatusEnum.Pending) {
-              return;
-            }
-
-            const startedAt = yield* DateTime.now;
-
-            yield* runtimeRepository.updateInstance({
-              ...workflow,
-              status: WorkflowInstanceStatusEnum.Running,
-              startedAt,
-            });
-
-            yield* Effect.logInfo("Workflow started").pipe(
-              Effect.annotateLogs({
-                workflowInstanceId: workflow.id,
-                workflowDefinitionName: workflow.workflowDefinitionName,
-                workflowDefinitionVersion: workflow.workflowDefinitionVersion,
-              }),
-            );
-
-            yield* advanceWorkflow(workflow.id);
-          }),
+        executeWorkflow,
       });
     }),
   );

@@ -4,7 +4,7 @@ import { WorkflowStepDefinitionId } from "./ids.ts";
 
 const LiteralExpression = Schema.Struct({
   _type: Schema.Literal("Literal"),
-  value: Schema.Unknown,
+  value: Schema.Json,
 }).annotate({ identifier: "LiteralExpression" });
 
 const WorkflowInputExpression = Schema.Struct({

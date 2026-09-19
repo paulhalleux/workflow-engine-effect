@@ -12,7 +12,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import type { WorkflowDefinition } from "@/domain/workflow";
+import type { WorkflowDefinition, WorkflowExecutionDetails } from "@/domain/workflow";
 
 import { createWorkflowGraph, type WorkflowNodeData } from "./workflow-layout";
 import { WorkflowNode } from "./workflow-node";
@@ -21,6 +21,7 @@ const nodeTypes = { workflowStep: WorkflowNode };
 
 interface WorkflowCanvasProps {
   workflow: WorkflowDefinition;
+  execution?: WorkflowExecutionDetails;
   onSelectNode: (nodeId: string | null) => void;
 }
 
@@ -32,16 +33,20 @@ export function WorkflowCanvas(props: WorkflowCanvasProps) {
   );
 }
 
-function Canvas({ workflow, onSelectNode }: WorkflowCanvasProps) {
-  const graph = useMemo(() => createWorkflowGraph(workflow), [workflow]);
+function Canvas({ workflow, execution, onSelectNode }: WorkflowCanvasProps) {
+  const graph = useMemo(() => createWorkflowGraph(workflow, execution), [workflow, execution]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>(graph.nodes);
   const edges = graph.edges;
   const flow = useReactFlow<Node<WorkflowNodeData>>();
 
   useEffect(() => {
     setNodes(graph.nodes);
-    window.setTimeout(() => void flow.fitView({ padding: 0.18, duration: 500 }), 20);
-  }, [flow, graph.nodes, setNodes]);
+  }, [graph.nodes, setNodes]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void flow.fitView({ padding: 0.18, duration: 500 }), 20);
+    return () => window.clearTimeout(timer);
+  }, [flow, workflow.name, workflow.version]);
 
   const zoomIn = () => void flow.zoomIn({ duration: 180 });
   const zoomOut = () => void flow.zoomOut({ duration: 180 });
@@ -61,11 +66,10 @@ function Canvas({ workflow, onSelectNode }: WorkflowCanvasProps) {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         proOptions={{ hideAttribution: true }}
-        style={{ backgroundColor: "#111318" }}
         onNodeClick={(_, node) => onSelectNode(node.id)}
         onPaneClick={() => onSelectNode(null)}
       >
-        <Background color="#3a3d45" gap={24} size={1} variant={BackgroundVariant.Dots} />
+        <Background color="var(--border)" gap={24} size={1} variant={BackgroundVariant.Dots} />
       </ReactFlow>
 
       <div className="canvas-controls" aria-label="Canvas controls">
