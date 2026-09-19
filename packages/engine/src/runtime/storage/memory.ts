@@ -9,9 +9,9 @@ import {
 import { Effect, Layer, Ref } from "effect";
 
 import {
-  WorkflowInstanceNotFound,
-  WorkflowStepInstanceNotFound,
-  WorkflowTaskAttemptNotFound,
+  WorkflowInstanceNotFoundError,
+  WorkflowStepInstanceNotFoundError,
+  WorkflowTaskAttemptNotFoundError,
 } from "../errors.ts";
 import { WorkflowRuntimeRepository } from "../workflow-runtime-repository.ts";
 
@@ -44,7 +44,7 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
           Effect.flatMap((current) => {
             const instance = current.instances.get(id);
             if (!instance) {
-              return Effect.fail(new WorkflowInstanceNotFound({ id }));
+              return Effect.fail(new WorkflowInstanceNotFoundError({ id }));
             }
             return Effect.succeed(instance);
           }),
@@ -79,7 +79,7 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
           Effect.flatMap((current) => {
             const instance = current.steps.get(id);
             if (!instance) {
-              return Effect.fail(new WorkflowStepInstanceNotFound({ id }));
+              return Effect.fail(new WorkflowStepInstanceNotFoundError({ id }));
             }
             return Effect.succeed(instance);
           }),
@@ -115,7 +115,7 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
           Effect.flatMap((current) => {
             const attempt = current.attempts.get(id);
             if (!attempt) {
-              return Effect.fail(new WorkflowTaskAttemptNotFound({ id }));
+              return Effect.fail(new WorkflowTaskAttemptNotFoundError({ id }));
             }
             return Effect.succeed(attempt);
           }),

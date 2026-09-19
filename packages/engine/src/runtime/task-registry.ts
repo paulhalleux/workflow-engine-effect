@@ -1,7 +1,7 @@
 import { TaskId } from "@workflow/core";
 import { Context, Effect, Layer, Schema } from "effect";
 
-import { TaskNotFound } from "./errors.ts";
+import { TaskNotFoundError } from "./errors.ts";
 import { Task } from "./task.ts";
 
 export class TaskRegistry extends Context.Service<
@@ -13,7 +13,7 @@ export class TaskRegistry extends Context.Service<
      * @param taskId - Task implementation identifier.
      * @returns The registered task.
      */
-    readonly get: (taskId: TaskId) => Effect.Effect<Task, TaskNotFound>;
+    readonly get: (taskId: TaskId) => Effect.Effect<Task, TaskNotFoundError>;
   }
 >()("@workflow/engine/TaskRegistry") {
   static readonly make = (tasks: ReadonlyMap<TaskId, Task>) =>
@@ -22,7 +22,7 @@ export class TaskRegistry extends Context.Service<
       TaskRegistry.of({
         get: (taskId) => {
           const task = tasks.get(taskId);
-          return task ? Effect.succeed(task) : Effect.fail(new TaskNotFound({ id: taskId }));
+          return task ? Effect.succeed(task) : Effect.fail(new TaskNotFoundError({ id: taskId }));
         },
       }),
     );

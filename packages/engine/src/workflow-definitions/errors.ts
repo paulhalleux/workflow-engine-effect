@@ -2,7 +2,7 @@ import { Schema } from "effect";
 
 import { BumpType } from "./commands/version-bumping-options.ts";
 
-export class WorkflowDefinitionNotFound extends Schema.TaggedError<WorkflowDefinitionNotFound>()(
+export class WorkflowDefinitionNotFoundError extends Schema.TaggedError<WorkflowDefinitionNotFoundError>()(
   "WorkflowDefinitionNotFound",
   { name: Schema.String, version: Schema.optional(Schema.String) },
 ) {}

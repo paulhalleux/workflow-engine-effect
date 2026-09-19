@@ -4,7 +4,7 @@ import { rcompare, valid } from "semver";
 
 import {
   WorkflowDefinitionAlreadyExists,
-  WorkflowDefinitionNotFound,
+  WorkflowDefinitionNotFoundError,
   WorkflowDefinitionStorageError,
 } from "../errors.ts";
 import { WorkflowDefinitionRepository } from "../workflow-definition-repository.ts";
@@ -137,14 +137,14 @@ export const makeWorkflowDefinitionRepositoryFile = (
         directory: string,
       ): Effect.Effect<
         Array<string>,
-        WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+        WorkflowDefinitionStorageError | WorkflowDefinitionNotFoundError
       > =>
         fs
           .readDirectory(directory)
           .pipe(
             Effect.mapError((error) =>
               isNotFound(error)
-                ? new WorkflowDefinitionNotFound({ name: directory })
+                ? new WorkflowDefinitionNotFoundError({ name: directory })
                 : toStorageError(error),
             ),
           );
@@ -159,7 +159,7 @@ export const makeWorkflowDefinitionRepositoryFile = (
         name: string,
       ): Effect.Effect<
         Array<WorkflowDefinition>,
-        WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+        WorkflowDefinitionStorageError | WorkflowDefinitionNotFoundError
       > =>
         Effect.gen(function* () {
           const directory = getDefinitionDirectory(name);
@@ -186,7 +186,7 @@ export const makeWorkflowDefinitionRepositoryFile = (
         name: string,
       ): Effect.Effect<
         WorkflowDefinition,
-        WorkflowDefinitionNotFound | WorkflowDefinitionStorageError
+        WorkflowDefinitionNotFoundError | WorkflowDefinitionStorageError
       > =>
         Effect.gen(function* () {
           const definitions = yield* listByName(name);
@@ -204,7 +204,7 @@ export const makeWorkflowDefinitionRepositoryFile = (
           const latest = definitions[0];
 
           if (!latest) {
-            return yield* Effect.fail(new WorkflowDefinitionNotFound({ name }));
+            return yield* Effect.fail(new WorkflowDefinitionNotFoundError({ name }));
           }
 
           return latest;
@@ -254,7 +254,7 @@ export const makeWorkflowDefinitionRepositoryFile = (
           return fs.readFileString(filePath).pipe(
             Effect.mapError((error) =>
               isNotFound(error)
-                ? new WorkflowDefinitionNotFound({ name, version })
+                ? new WorkflowDefinitionNotFoundError({ name, version })
                 : toStorageError(error),
             ),
             Effect.flatMap((content) =>
@@ -287,7 +287,7 @@ export const makeWorkflowDefinitionRepositoryFile = (
             .pipe(
               Effect.mapError((error) =>
                 isNotFound(error)
-                  ? new WorkflowDefinitionNotFound({ name, version })
+                  ? new WorkflowDefinitionNotFoundError({ name, version })
                   : toStorageError(error),
               ),
             );

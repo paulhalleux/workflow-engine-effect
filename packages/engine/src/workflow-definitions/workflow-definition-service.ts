@@ -6,7 +6,7 @@ import { CreateWorkflowDefinition } from "./commands/create-workflow-definition.
 import { VersionBumpingOptions } from "./commands/version-bumping-options.ts";
 import {
   WorkflowDefinitionAlreadyExists,
-  WorkflowDefinitionNotFound,
+  WorkflowDefinitionNotFoundError,
   WorkflowDefinitionStorageError,
   WorkflowDefinitionVersionBumpingError,
 } from "./errors.ts";
@@ -43,7 +43,7 @@ export class WorkflowDefinitionService extends Context.Service<
      * @returns An effect that completes when the definition is persisted.
      * @throws WorkflowDefinitionAlreadyExists When the same ID and version
      * already exist.
-     * @throws WorkflowDefinitionNotFound When the requested version does not
+     * @throws WorkflowDefinitionNotFoundError When the requested version does not
      * exist.
      * @throws WorkflowDefinitionStorageError When the underlying storage fails.
      */
@@ -53,7 +53,7 @@ export class WorkflowDefinitionService extends Context.Service<
     ) => Effect.Effect<
       WorkflowDefinitionEntry,
       | WorkflowDefinitionAlreadyExists
-      | WorkflowDefinitionNotFound
+      | WorkflowDefinitionNotFoundError
       | WorkflowDefinitionStorageError
       | WorkflowDefinitionVersionBumpingError
     >;
@@ -64,7 +64,7 @@ export class WorkflowDefinitionService extends Context.Service<
      * @param name - Workflow definition name.
      * @param version - Exact version to retrieve.
      * @returns The stored workflow definition.
-     * @throws WorkflowDefinitionNotFound When the requested version does not
+     * @throws WorkflowDefinitionNotFoundError When the requested version does not
      * exist.
      * @throws WorkflowDefinitionStorageError When the underlying storage fails.
      */
@@ -73,7 +73,7 @@ export class WorkflowDefinitionService extends Context.Service<
       version: string,
     ) => Effect.Effect<
       WorkflowDefinitionEntry,
-      WorkflowDefinitionNotFound | WorkflowDefinitionStorageError
+      WorkflowDefinitionNotFoundError | WorkflowDefinitionStorageError
     >;
 
     /**
@@ -98,7 +98,7 @@ export class WorkflowDefinitionService extends Context.Service<
       name: string,
     ) => Effect.Effect<
       ReadonlyArray<WorkflowDefinitionEntry>,
-      WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+      WorkflowDefinitionStorageError | WorkflowDefinitionNotFoundError
     >;
 
     /**
@@ -107,14 +107,14 @@ export class WorkflowDefinitionService extends Context.Service<
      * @param name - Workflow definition name.
      * @param version - Exact version to delete.
      * @returns An effect that completes when the definition is deleted.
-     * @throws WorkflowDefinitionNotFound When the requested version does not
+     * @throws WorkflowDefinitionNotFoundError When the requested version does not
      * exist.
      * @throws WorkflowDefinitionStorageError When the underlying storage fails.
      */
     readonly delete: (
       name: string,
       version: string,
-    ) => Effect.Effect<void, WorkflowDefinitionNotFound | WorkflowDefinitionStorageError>;
+    ) => Effect.Effect<void, WorkflowDefinitionNotFoundError | WorkflowDefinitionStorageError>;
   }
 >()("@workflow/engine/WorkflowDefinitionService") {
   /**
@@ -137,7 +137,7 @@ export class WorkflowDefinitionService extends Context.Service<
           })[0];
 
           if (!latest) {
-            return yield* Effect.fail(new WorkflowDefinitionNotFound({ name }));
+            return yield* Effect.fail(new WorkflowDefinitionNotFoundError({ name }));
           }
 
           return latest;

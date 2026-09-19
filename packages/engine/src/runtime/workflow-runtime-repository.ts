@@ -9,10 +9,10 @@ import {
 import { Context, Effect } from "effect";
 
 import {
-  WorkflowInstanceNotFound,
+  WorkflowInstanceNotFoundError,
   WorkflowRuntimeStorageError,
-  WorkflowStepInstanceNotFound,
-  WorkflowTaskAttemptNotFound,
+  WorkflowStepInstanceNotFoundError,
+  WorkflowTaskAttemptNotFoundError,
 } from "./errors.ts";
 
 export class WorkflowRuntimeRepository extends Context.Service<
@@ -34,7 +34,10 @@ export class WorkflowRuntimeRepository extends Context.Service<
      */
     readonly getInstance: (
       id: WorkflowInstanceId,
-    ) => Effect.Effect<WorkflowInstance, WorkflowInstanceNotFound | WorkflowRuntimeStorageError>;
+    ) => Effect.Effect<
+      WorkflowInstance,
+      WorkflowInstanceNotFoundError | WorkflowRuntimeStorageError
+    >;
 
     /**
      * Updates an existing workflow instance.
@@ -72,7 +75,7 @@ export class WorkflowRuntimeRepository extends Context.Service<
       id: WorkflowStepInstanceId,
     ) => Effect.Effect<
       WorkflowStepInstance,
-      WorkflowRuntimeStorageError | WorkflowStepInstanceNotFound
+      WorkflowRuntimeStorageError | WorkflowStepInstanceNotFoundError
     >;
 
     /**
@@ -111,7 +114,7 @@ export class WorkflowRuntimeRepository extends Context.Service<
       id: WorkflowTaskAttemptId,
     ) => Effect.Effect<
       WorkflowTaskAttempt,
-      WorkflowTaskAttemptNotFound | WorkflowRuntimeStorageError
+      WorkflowTaskAttemptNotFoundError | WorkflowRuntimeStorageError
     >;
   }
 >()("@workflow/engine/WorkflowRuntimeRepository") {}

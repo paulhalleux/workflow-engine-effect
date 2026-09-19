@@ -3,13 +3,17 @@ import { Schema } from "effect";
 import { WorkflowStepInstanceId, WorkflowTaskAttemptId } from "./ids.ts";
 import { WorkflowExecutionFailure } from "./workflow-execution-failure.ts";
 
-export const WorkflowTaskAttemptStatus = Schema.Literals([
-  "Pending",
-  "Running",
-  "Succeeded",
-  "Failed",
-  "Cancelled",
-]).annotate({ identifier: "WorkflowTaskAttemptStatus" });
+export enum WorkflowTaskAttemptStatusEnum {
+  Pending = "Pending",
+  Running = "Running",
+  Succeeded = "Succeeded",
+  Failed = "Failed",
+  Cancelled = "Cancelled",
+}
+
+export const WorkflowTaskAttemptStatus = Schema.Enum(WorkflowTaskAttemptStatusEnum).annotate({
+  identifier: "WorkflowTaskAttemptStatus",
+});
 
 export const WorkflowTaskAttempt = Schema.Struct({
   id: WorkflowTaskAttemptId,

@@ -3,7 +3,7 @@ import { Context, Effect } from "effect";
 
 import {
   WorkflowDefinitionAlreadyExists,
-  WorkflowDefinitionNotFound,
+  WorkflowDefinitionNotFoundError,
   WorkflowDefinitionStorageError,
 } from "./errors.ts";
 
@@ -32,7 +32,7 @@ export class WorkflowDefinitionRepository extends Context.Service<
      * @param name - Workflow definition name.
      * @param version - Exact version to retrieve or undefined to retrieve the latest version.
      * @returns The stored workflow definition.
-     * @throws WorkflowDefinitionNotFound When the requested version does not
+     * @throws WorkflowDefinitionNotFoundError When the requested version does not
      * exist.
      * @throws WorkflowDefinitionStorageError When the underlying storage fails.
      */
@@ -41,7 +41,7 @@ export class WorkflowDefinitionRepository extends Context.Service<
       version: string | undefined,
     ) => Effect.Effect<
       WorkflowDefinition,
-      WorkflowDefinitionNotFound | WorkflowDefinitionStorageError
+      WorkflowDefinitionNotFoundError | WorkflowDefinitionStorageError
     >;
 
     /**
@@ -66,7 +66,7 @@ export class WorkflowDefinitionRepository extends Context.Service<
       name: string,
     ) => Effect.Effect<
       ReadonlyArray<WorkflowDefinition>,
-      WorkflowDefinitionStorageError | WorkflowDefinitionNotFound
+      WorkflowDefinitionStorageError | WorkflowDefinitionNotFoundError
     >;
 
     /**
@@ -75,13 +75,13 @@ export class WorkflowDefinitionRepository extends Context.Service<
      * @param name - Workflow definition name.
      * @param version - Exact version to delete.
      * @returns An effect that completes when the definition is deleted.
-     * @throws WorkflowDefinitionNotFound When the requested version does not
+     * @throws WorkflowDefinitionNotFoundError When the requested version does not
      * exist.
      * @throws WorkflowDefinitionStorageError When the underlying storage fails.
      */
     readonly delete: (
       name: string,
       version: string,
-    ) => Effect.Effect<void, WorkflowDefinitionNotFound | WorkflowDefinitionStorageError>;
+    ) => Effect.Effect<void, WorkflowDefinitionNotFoundError | WorkflowDefinitionStorageError>;
   }
 >()("@workflow/engine/WorkflowDefinitionRepository") {}

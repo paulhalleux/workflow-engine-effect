@@ -1,5 +1,6 @@
 import {
   TaskStepDefinition,
+  WorkflowDefinition,
   WorkflowInstance,
   WorkflowInstanceId,
   WorkflowInstanceStatusEnum,
@@ -8,21 +9,29 @@ import {
   WorkflowStepInstanceStatusEnum,
   WorkflowTaskAttempt,
   WorkflowTaskAttemptId,
+  WorkflowTaskAttemptStatusEnum,
 } from "@workflow/core";
-import { Context, Crypto, DateTime, Effect, Layer } from "effect";
+import { Context, Crypto, DateTime, Duration, Effect, Layer } from "effect";
 
 import {
-  WorkflowDefinitionNotFound,
+  WorkflowDefinitionNotFoundError,
   WorkflowDefinitionService,
   WorkflowDefinitionStorageError,
 } from "../workflow-definitions";
 import { StartWorkflow } from "./commands/start-workflow.ts";
 import {
+  TaskNotFoundError,
+  ValueExpressionResolutionError,
   WorkflowInputResolutionError,
   WorkflowInstanceCreationError,
+  WorkflowInstanceNotFoundError,
   WorkflowRuntimeStorageError,
+  WorkflowStepInstanceNotFoundError,
+  WorkflowStepNotFoundError,
+  WorkflowTaskAttemptNotFoundError,
 } from "./errors.ts";
 import { resolveTaskInput, resolveWorkflowInput } from "./input-resolver.ts";
+import { TaskRegistry } from "./task-registry.ts";
 import { WorkflowRuntimeRepository } from "./workflow-runtime-repository.ts";
 
 export class WorkflowExecutionService extends Context.Service<
@@ -37,11 +46,17 @@ export class WorkflowExecutionService extends Context.Service<
       command: StartWorkflow,
     ) => Effect.Effect<
       void,
-      | WorkflowDefinitionNotFound
+      | WorkflowDefinitionNotFoundError
       | WorkflowDefinitionStorageError
       | WorkflowInputResolutionError
       | WorkflowInstanceCreationError
-      | WorkflowRuntimeStorageError,
+      | WorkflowRuntimeStorageError
+      | WorkflowStepInstanceNotFoundError
+      | WorkflowTaskAttemptNotFoundError
+      | ValueExpressionResolutionError
+      | WorkflowStepNotFoundError
+      | WorkflowInstanceNotFoundError
+      | TaskNotFoundError,
       DateTime.DateTime | Crypto.Crypto
     >;
   }
@@ -51,6 +66,24 @@ export class WorkflowExecutionService extends Context.Service<
     Effect.gen(function* () {
       const workflowDefService = yield* WorkflowDefinitionService;
       const runtimeRepository = yield* WorkflowRuntimeRepository;
+      const taskRegistry = yield* TaskRegistry;
+
+      const crypto = yield* Crypto.Crypto;
+
+      const makeWorkflowStepInstanceId = crypto.randomUUIDv7.pipe(
+        Effect.orDie,
+        Effect.map(WorkflowStepInstanceId.make),
+      );
+
+      const makeWorkflowTaskAttemptId = crypto.randomUUIDv7.pipe(
+        Effect.orDie,
+        Effect.map(WorkflowTaskAttemptId.make),
+      );
+
+      const makeWorkflowInstanceId = crypto.randomUUIDv7.pipe(
+        Effect.orDie,
+        Effect.map(WorkflowInstanceId.make),
+      );
 
       /**
        * Activates a task step by creating a workflow step instance and a task attempt.
@@ -65,10 +98,9 @@ export class WorkflowExecutionService extends Context.Service<
           const input = yield* resolveTaskInput(step, { workflow, steps: existingSteps });
 
           const now = yield* DateTime.now;
-          const crypto = yield* Crypto.Crypto;
 
           const stepInstance: WorkflowStepInstance = {
-            id: WorkflowStepInstanceId.make(yield* crypto.randomUUIDv7),
+            id: yield* makeWorkflowStepInstanceId,
             workflowInstanceId: workflow.id,
             stepId: step.id,
             status: WorkflowStepInstanceStatusEnum.Pending,
@@ -77,10 +109,10 @@ export class WorkflowExecutionService extends Context.Service<
           };
 
           const attempt: WorkflowTaskAttempt = {
-            id: WorkflowTaskAttemptId.make(yield* crypto.randomUUIDv7),
+            id: yield* makeWorkflowTaskAttemptId,
             workflowStepInstanceId: stepInstance.id,
             number: 1,
-            status: "Pending",
+            status: WorkflowTaskAttemptStatusEnum.Pending,
             createdAt: now,
             scheduledAt: now,
           };
@@ -91,21 +123,244 @@ export class WorkflowExecutionService extends Context.Service<
           return attempt;
         });
 
-      const makeWorkflowInstanceId = Effect.gen(function* () {
-        const crypto = yield* Crypto.Crypto;
-        return WorkflowInstanceId.make(
-          yield* crypto.randomUUIDv7.pipe(
-            Effect.catchTag("PlatformError", (error) =>
-              Effect.fail(
-                new WorkflowInstanceCreationError({
-                  message: "Failed to generate workflow instance ID",
-                  cause: error,
-                }),
-              ),
+      /**
+       * Executes one persisted task attempt.
+       *
+       * A task failure is recorded in workflow runtime state rather than
+       * escaping as an engine failure. Storage and registry failures remain in
+       * the Effect error channel.
+       */
+      const executeTaskAttempt = (
+        attemptId: WorkflowTaskAttemptId,
+      ): Effect.Effect<
+        void,
+        | WorkflowDefinitionNotFoundError
+        | WorkflowDefinitionStorageError
+        | WorkflowRuntimeStorageError
+        | WorkflowInstanceNotFoundError
+        | WorkflowStepInstanceNotFoundError
+        | WorkflowTaskAttemptNotFoundError
+        | TaskNotFoundError
+      > =>
+        Effect.gen(function* () {
+          const attempt = yield* runtimeRepository.getTaskAttempt(attemptId);
+          if (attempt.status !== WorkflowTaskAttemptStatusEnum.Pending) {
+            return;
+          }
+
+          const stepInstance = yield* runtimeRepository.getStepInstance(
+            attempt.workflowStepInstanceId,
+          );
+
+          const workflow = yield* runtimeRepository.getInstance(stepInstance.workflowInstanceId);
+          const definition = yield* workflowDefService.get(
+            workflow.workflowDefinitionName,
+            workflow.workflowDefinitionVersion,
+          );
+
+          const stepDefinition = definition.steps.find((step) => step.id === stepInstance.stepId);
+          if (stepDefinition === undefined || stepDefinition._type !== "task") {
+            return yield* Effect.die(
+              new WorkflowStepNotFoundError({ stepId: stepInstance.stepId }),
+            );
+          }
+
+          const task = yield* taskRegistry.get(stepDefinition.taskId);
+          const startedAt = yield* DateTime.now;
+
+          const runningAttempt: WorkflowTaskAttempt = {
+            ...attempt,
+            status: WorkflowTaskAttemptStatusEnum.Running,
+            startedAt,
+          };
+
+          const runningStep: WorkflowStepInstance = {
+            ...stepInstance,
+            status: WorkflowStepInstanceStatusEnum.Running,
+            startedAt: stepInstance.startedAt ?? startedAt,
+          };
+
+          yield* runtimeRepository.updateTaskAttempt(runningAttempt);
+          yield* runtimeRepository.updateStepInstance(runningStep);
+
+          const result = yield* task.execute(runningStep.input).pipe(
+            Effect.map((output) => ({ _tag: "Succeeded" as const, output })),
+            Effect.catch((failure) => Effect.succeed({ _tag: "Failed" as const, failure })),
+          );
+
+          const completedAt = yield* DateTime.now;
+
+          if (result._tag === "Succeeded") {
+            yield* runtimeRepository.updateTaskAttempt({
+              ...runningAttempt,
+              status: WorkflowTaskAttemptStatusEnum.Succeeded,
+              completedAt,
+              output: result.output,
+            });
+
+            yield* runtimeRepository.updateStepInstance({
+              ...runningStep,
+              status: WorkflowStepInstanceStatusEnum.Succeeded,
+              completedAt,
+              output: result.output,
+            });
+
+            return;
+          }
+
+          yield* runtimeRepository.updateTaskAttempt({
+            ...runningAttempt,
+            status: WorkflowTaskAttemptStatusEnum.Failed,
+            completedAt,
+            failure: result.failure,
+          });
+
+          const maxAttempts = stepDefinition.retry?.maxAttempts ?? 1;
+          if (attempt.number >= maxAttempts) {
+            yield* runtimeRepository.updateStepInstance({
+              ...runningStep,
+              status: WorkflowStepInstanceStatusEnum.Failed,
+              completedAt,
+              failure: result.failure,
+            });
+
+            yield* runtimeRepository.updateInstance({
+              ...workflow,
+              status: WorkflowInstanceStatusEnum.Failed,
+              completedAt,
+              failure: result.failure,
+            });
+
+            return;
+          }
+
+          const retry = stepDefinition.retry!;
+          const nextAttempt: WorkflowTaskAttempt = {
+            id: yield* makeWorkflowTaskAttemptId,
+            workflowStepInstanceId: stepInstance.id,
+            number: attempt.number + 1,
+            status: WorkflowTaskAttemptStatusEnum.Pending,
+            createdAt: completedAt,
+            scheduledAt: DateTime.addDuration(completedAt, Duration.millis(retry.delayMs)),
+          };
+
+          yield* runtimeRepository.updateStepInstance({
+            ...runningStep,
+            status: WorkflowStepInstanceStatusEnum.WaitingRetry,
+          });
+
+          yield* runtimeRepository.createTaskAttempt(nextAttempt);
+          yield* Effect.sleep(Duration.millis(retry.delayMs));
+
+          yield* executeTaskAttempt(nextAttempt.id);
+        });
+
+      /**
+       * Finds task steps that can be activated from the current persisted
+       * workflow state.
+       */
+      const findRunnableTaskSteps = (
+        definition: WorkflowDefinition,
+        instances: ReadonlyArray<WorkflowStepInstance>,
+      ): ReadonlyArray<TaskStepDefinition> => {
+        const instantiated = new Set(instances.map((instance) => instance.stepId));
+
+        return definition.steps.filter((step): step is TaskStepDefinition => {
+          if (step._type !== "task") {
+            return false;
+          }
+
+          if (instantiated.has(step.id)) {
+            return false;
+          }
+
+          const incoming = definition.transitions.filter((transition) => transition.to === step.id);
+
+          return incoming.every((transition) =>
+            instances.some(
+              (instance) =>
+                instance.stepId === transition.from.stepId &&
+                instance.status === WorkflowStepInstanceStatusEnum.Succeeded,
             ),
-          ),
-        );
-      });
+          );
+        });
+      };
+
+      /**
+       * Advances a workflow using the currently persisted execution state.
+       *
+       * The first implementation supports task-only acyclic workflows.
+       */
+      const advanceWorkflow = (
+        workflowInstanceId: WorkflowInstanceId,
+      ): Effect.Effect<
+        void,
+        | WorkflowDefinitionNotFoundError
+        | WorkflowDefinitionStorageError
+        | WorkflowRuntimeStorageError
+        | WorkflowInstanceNotFoundError
+        | WorkflowStepInstanceNotFoundError
+        | WorkflowTaskAttemptNotFoundError
+        | ValueExpressionResolutionError
+        | TaskNotFoundError
+      > =>
+        Effect.gen(function* () {
+          while (true) {
+            const workflow = yield* runtimeRepository.getInstance(workflowInstanceId);
+
+            if (workflow.status !== WorkflowInstanceStatusEnum.Running) {
+              return;
+            }
+
+            const definition = yield* workflowDefService.get(
+              workflow.workflowDefinitionName,
+              workflow.workflowDefinitionVersion,
+            );
+
+            const unsupportedStep = definition.steps.find((step) => step._type !== "task");
+
+            if (unsupportedStep !== undefined) {
+              return yield* Effect.die(
+                new Error(`Workflow runtime does not support "${unsupportedStep._type}" steps yet`),
+              );
+            }
+
+            const instances = yield* runtimeRepository.listStepInstances(workflow.id);
+
+            const completed = definition.steps.every((step) =>
+              instances.some(
+                (instance) =>
+                  instance.stepId === step.id &&
+                  instance.status === WorkflowStepInstanceStatusEnum.Succeeded,
+              ),
+            );
+
+            if (completed) {
+              yield* runtimeRepository.updateInstance({
+                ...workflow,
+                status: WorkflowInstanceStatusEnum.Succeeded,
+                completedAt: yield* DateTime.now,
+              });
+
+              return;
+            }
+
+            const runnable = findRunnableTaskSteps(definition, instances);
+
+            if (runnable.length === 0) {
+              return;
+            }
+
+            const attempts = yield* Effect.forEach(runnable, (step) =>
+              activateTaskStep(workflow, step),
+            );
+
+            yield* Effect.forEach(attempts, (attempt) => executeTaskAttempt(attempt.id), {
+              concurrency: "unbounded",
+              discard: true,
+            });
+          }
+        });
 
       return WorkflowExecutionService.of({
         startWorkflow: (command) =>
@@ -126,9 +381,7 @@ export class WorkflowExecutionService extends Context.Service<
             };
 
             yield* runtimeRepository.createInstance(workflow);
-            // advanceWorkflow
-
-            return Effect.succeed(undefined);
+            yield* advanceWorkflow(workflow.id);
           }),
       });
     }),

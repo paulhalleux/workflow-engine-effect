@@ -1,7 +1,7 @@
 import type { WorkflowDefinition } from "@workflow/core";
 import { Effect, Layer, Ref } from "effect";
 
-import { WorkflowDefinitionAlreadyExists, WorkflowDefinitionNotFound } from "../errors.ts";
+import { WorkflowDefinitionAlreadyExists, WorkflowDefinitionNotFoundError } from "../errors.ts";
 import { WorkflowDefinitionRepository } from "../workflow-definition-repository.ts";
 
 const keyOf = (definitionLike: { name: string; version: string | undefined }): string =>
@@ -44,7 +44,7 @@ export const WorkflowDefinitionRepositoryMemory = Layer.effect(
             const definition = current.get(keyOf({ name, version }));
             return definition
               ? Effect.succeed(definition)
-              : Effect.fail(new WorkflowDefinitionNotFound({ name, version }));
+              : Effect.fail(new WorkflowDefinitionNotFoundError({ name, version }));
           }),
         ),
 
@@ -59,7 +59,7 @@ export const WorkflowDefinitionRepositoryMemory = Layer.effect(
 
             return definitionsByName.length > 0
               ? Effect.succeed(definitionsByName)
-              : Effect.fail(new WorkflowDefinitionNotFound({ name, version: undefined }));
+              : Effect.fail(new WorkflowDefinitionNotFoundError({ name, version: undefined }));
           }),
         ),
 
@@ -73,7 +73,7 @@ export const WorkflowDefinitionRepositoryMemory = Layer.effect(
           Effect.flatMap((deleted) =>
             deleted
               ? Effect.succeed(undefined)
-              : Effect.fail(new WorkflowDefinitionNotFound({ name, version })),
+              : Effect.fail(new WorkflowDefinitionNotFoundError({ name, version })),
           ),
         ),
     });

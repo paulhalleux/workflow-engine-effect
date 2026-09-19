@@ -5,17 +5,17 @@ export class WorkflowRuntimeStorageError extends Schema.TaggedError<WorkflowRunt
   { message: Schema.String, cause: Schema.Defect() },
 ) {}
 
-export class WorkflowInstanceNotFound extends Schema.TaggedError<WorkflowInstanceNotFound>()(
+export class WorkflowInstanceNotFoundError extends Schema.TaggedError<WorkflowInstanceNotFoundError>()(
   "WorkflowInstanceNotFound",
   { id: Schema.String },
 ) {}
 
-export class WorkflowTaskAttemptNotFound extends Schema.TaggedError<WorkflowTaskAttemptNotFound>()(
+export class WorkflowTaskAttemptNotFoundError extends Schema.TaggedError<WorkflowTaskAttemptNotFoundError>()(
   "WorkflowTaskAttemptNotFound",
   { id: Schema.String },
 ) {}
 
-export class WorkflowStepInstanceNotFound extends Schema.TaggedError<WorkflowStepInstanceNotFound>()(
+export class WorkflowStepInstanceNotFoundError extends Schema.TaggedError<WorkflowStepInstanceNotFoundError>()(
   "WorkflowStepInstanceNotFound",
   { id: Schema.String },
 ) {}
@@ -30,11 +30,16 @@ export class WorkflowInputResolutionError extends Schema.TaggedError<WorkflowInp
   { message: Schema.String, parameterName: Schema.String },
 ) {}
 
-export class TaskNotFound extends Schema.TaggedError<TaskNotFound>()("TaskNotFound", {
+export class TaskNotFoundError extends Schema.TaggedError<TaskNotFoundError>()("TaskNotFound", {
   id: Schema.String,
 }) {}
 
 export class WorkflowInstanceCreationError extends Schema.TaggedError<WorkflowInstanceCreationError>()(
   "WorkflowInstanceCreationError",
   { message: Schema.String, cause: Schema.Defect() },
+) {}
+
+export class WorkflowStepNotFoundError extends Schema.TaggedError<WorkflowStepNotFoundError>()(
+  "WorkflowStepNotFoundError",
+  { stepId: Schema.String },
 ) {}
