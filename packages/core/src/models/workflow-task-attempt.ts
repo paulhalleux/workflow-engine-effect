@@ -16,7 +16,12 @@ export const WorkflowTaskAttempt = Schema.Struct({
   workflowStepInstanceId: WorkflowStepInstanceId,
   number: Schema.Int,
   status: WorkflowTaskAttemptStatus,
+  output: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+  createdAt: Schema.DateTimeUtc,
+  scheduledAt: Schema.DateTimeUtc,
   startedAt: Schema.optional(Schema.DateTimeUtc),
   completedAt: Schema.optional(Schema.DateTimeUtc),
   failure: Schema.optional(WorkflowExecutionFailure),
 }).annotate({ identifier: "WorkflowTaskAttempt" });
+
+export type WorkflowTaskAttempt = typeof WorkflowTaskAttempt.Type;

@@ -9,3 +9,5 @@ export * from "./trigger-definition.ts";
 export * from "./workflow-instance.ts";
 export * from "./workflow-step-instance.ts";
 export * from "./workflow-instance-trigger.ts";
+export * from "./workflow-task-attempt.ts";
+export * from "./workflow-execution-failure.ts";

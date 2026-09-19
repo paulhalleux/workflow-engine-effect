@@ -6,4 +6,6 @@ export const WorkflowInstanceTrigger = Schema.Struct({
   triggerId: TriggerDefinitionId,
   type: Schema.String,
   payload: Schema.Unknown,
-});
+}).annotate({ identifier: "WorkflowInstanceTrigger" });
+
+export type WorkflowInstanceTrigger = typeof WorkflowInstanceTrigger.Type;

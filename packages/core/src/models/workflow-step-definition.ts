@@ -100,8 +100,8 @@ export type ControlStepDefinition = typeof ControlStepDefinition.Type;
  * Defines how a task step is retried when it fails.
  */
 export const TaskRetryDefinition = Schema.Struct({
-  maxAttempts: Schema.Int,
-  delayMs: Schema.Number,
+  maxAttempts: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+  delayMs: Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)),
 }).annotate({ identifier: "TaskRetryDefinition" });
 export type TaskRetryDefinition = typeof TaskRetryDefinition.Type;
 
