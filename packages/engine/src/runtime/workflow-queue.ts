@@ -19,7 +19,7 @@ export class WorkflowQueue extends Context.Service<
     readonly dequeue: Effect.Effect<WorkflowInstanceId>;
   }
 >()("@workflow/engine/WorkflowQueue") {
-  static readonly memory = Layer.effect(
+  static readonly memoryUnbounded = Layer.effect(
     WorkflowQueue,
     Effect.gen(function* () {
       const queue = yield* Queue.unbounded<WorkflowInstanceId>();
@@ -31,4 +31,18 @@ export class WorkflowQueue extends Context.Service<
       });
     }),
   );
+
+  static readonly memory = (concurrency: number) =>
+    Layer.effect(
+      WorkflowQueue,
+      Effect.gen(function* () {
+        const queue = yield* Queue.bounded<WorkflowInstanceId>(concurrency);
+        return WorkflowQueue.of({
+          enqueue: (instanceId) => {
+            return Queue.offer(queue, instanceId);
+          },
+          dequeue: Queue.take(queue),
+        });
+      }),
+    );
 }

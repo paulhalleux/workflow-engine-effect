@@ -9,7 +9,7 @@ const echoTask: Task = {
         Effect.annotateLogs({ input: JSON.stringify(input) }),
       );
 
-      yield* Effect.sleep("500 millis");
+      yield* Effect.sleep("5000 millis");
       return input;
     }),
 };
