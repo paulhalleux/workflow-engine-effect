@@ -45,7 +45,7 @@ export class WorkflowExecutionService extends Context.Service<
     readonly startWorkflow: (
       command: StartWorkflow,
     ) => Effect.Effect<
-      void,
+      WorkflowInstance,
       | WorkflowDefinitionNotFoundError
       | WorkflowDefinitionStorageError
       | WorkflowInputResolutionError
@@ -56,8 +56,7 @@ export class WorkflowExecutionService extends Context.Service<
       | ValueExpressionResolutionError
       | WorkflowStepNotFoundError
       | WorkflowInstanceNotFoundError
-      | TaskNotFoundError,
-      DateTime.DateTime | Crypto.Crypto
+      | TaskNotFoundError
     >;
   }
 >()("@workflow/engine/WorkflowExecutionService") {
@@ -119,6 +118,15 @@ export class WorkflowExecutionService extends Context.Service<
 
           yield* runtimeRepository.createStepInstance(stepInstance);
           yield* runtimeRepository.createTaskAttempt(attempt);
+
+          yield* Effect.logInfo("Workflow step activated").pipe(
+            Effect.annotateLogs({
+              workflowInstanceId: workflow.id,
+              workflowStepInstanceId: stepInstance.id,
+              stepId: step.id,
+              taskId: step.taskId,
+            }),
+          );
 
           return attempt;
         });
@@ -188,9 +196,31 @@ export class WorkflowExecutionService extends Context.Service<
             Effect.catch((failure) => Effect.succeed({ _tag: "Failed" as const, failure })),
           );
 
+          yield* Effect.logInfo("Task attempt started").pipe(
+            Effect.annotateLogs({
+              workflowInstanceId: workflow.id,
+              workflowStepInstanceId: stepInstance.id,
+              workflowTaskAttemptId: attempt.id,
+              stepId: stepDefinition.id,
+              taskId: stepDefinition.taskId,
+              attempt: attempt.number,
+            }),
+          );
+
           const completedAt = yield* DateTime.now;
 
           if (result._tag === "Succeeded") {
+            yield* Effect.logInfo("Task attempt succeeded").pipe(
+              Effect.annotateLogs({
+                workflowInstanceId: workflow.id,
+                workflowStepInstanceId: stepInstance.id,
+                workflowTaskAttemptId: attempt.id,
+                stepId: stepDefinition.id,
+                taskId: stepDefinition.taskId,
+                attempt: attempt.number,
+              }),
+            );
+
             yield* runtimeRepository.updateTaskAttempt({
               ...runningAttempt,
               status: WorkflowTaskAttemptStatusEnum.Succeeded,
@@ -207,6 +237,18 @@ export class WorkflowExecutionService extends Context.Service<
 
             return;
           }
+
+          yield* Effect.logWarning("Task attempt failed").pipe(
+            Effect.annotateLogs({
+              workflowInstanceId: workflow.id,
+              workflowStepInstanceId: stepInstance.id,
+              workflowTaskAttemptId: attempt.id,
+              stepId: stepDefinition.id,
+              taskId: stepDefinition.taskId,
+              attempt: attempt.number,
+              failure: result.failure.message,
+            }),
+          );
 
           yield* runtimeRepository.updateTaskAttempt({
             ...runningAttempt,
@@ -231,6 +273,18 @@ export class WorkflowExecutionService extends Context.Service<
               failure: result.failure,
             });
 
+            yield* Effect.logError("Workflow failed").pipe(
+              Effect.annotateLogs({
+                workflowInstanceId: workflow.id,
+                workflowStepInstanceId: stepInstance.id,
+                workflowTaskAttemptId: attempt.id,
+                stepId: stepDefinition.id,
+                taskId: stepDefinition.taskId,
+                attempt: attempt.number,
+                failure: result.failure.message,
+              }),
+            );
+
             return;
           }
 
@@ -250,6 +304,17 @@ export class WorkflowExecutionService extends Context.Service<
           });
 
           yield* runtimeRepository.createTaskAttempt(nextAttempt);
+
+          yield* Effect.logInfo("Task retry scheduled").pipe(
+            Effect.annotateLogs({
+              workflowInstanceId: workflow.id,
+              workflowStepInstanceId: stepInstance.id,
+              stepId: stepDefinition.id,
+              attempt: nextAttempt.number,
+              delayMs: retry.delayMs,
+            }),
+          );
+
           yield* Effect.sleep(Duration.millis(retry.delayMs));
 
           yield* executeTaskAttempt(nextAttempt.id);
@@ -342,6 +407,14 @@ export class WorkflowExecutionService extends Context.Service<
                 completedAt: yield* DateTime.now,
               });
 
+              yield* Effect.logInfo("Workflow succeeded").pipe(
+                Effect.annotateLogs({
+                  workflowInstanceId: workflow.id,
+                  workflowDefinitionName: workflow.workflowDefinitionName,
+                  workflowDefinitionVersion: workflow.workflowDefinitionVersion,
+                }),
+              );
+
               return;
             }
 
@@ -381,7 +454,18 @@ export class WorkflowExecutionService extends Context.Service<
             };
 
             yield* runtimeRepository.createInstance(workflow);
+
+            yield* Effect.logInfo("Workflow started").pipe(
+              Effect.annotateLogs({
+                workflowInstanceId: workflow.id,
+                workflowDefinitionName: workflow.workflowDefinitionName,
+                workflowDefinitionVersion: workflow.workflowDefinitionVersion,
+              }),
+            );
+
             yield* advanceWorkflow(workflow.id);
+
+            return yield* runtimeRepository.getInstance(workflow.id);
           }),
       });
     }),
