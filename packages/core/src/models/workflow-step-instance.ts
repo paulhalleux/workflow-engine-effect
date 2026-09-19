@@ -1,29 +1,32 @@
 import { Schema } from "effect";
 
 import { WorkflowInstanceId, WorkflowStepDefinitionId, WorkflowStepInstanceId } from "./ids.ts";
+import { WorkflowExecutionFailure } from "./workflow-execution-failure.ts";
 
-export enum StepRunStatusEnum {
+export enum WorkflowStepInstanceStatusEnum {
   Pending = "Pending",
   Running = "Running",
-  Completed = "Completed",
+  WaitingRetry = "WaitingRetry",
+  Succeeded = "Succeeded",
   Failed = "Failed",
+  Cancelled = "Cancelled",
 }
 
-export const StepRunStatus = Schema.Enum(StepRunStatusEnum).annotate({
-  identifier: "StepRunStatus",
+export const WorkflowStepInstanceStatus = Schema.Enum(WorkflowStepInstanceStatusEnum).annotate({
+  identifier: "WorkflowStepInstanceStatus",
 });
 
 export const WorkflowStepInstance = Schema.Struct({
   id: WorkflowStepInstanceId,
   workflowInstanceId: WorkflowInstanceId,
   stepId: WorkflowStepDefinitionId,
-  status: StepRunStatus,
+  status: WorkflowStepInstanceStatus,
   input: Schema.Record(Schema.String, Schema.Unknown),
   output: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
   createdAt: Schema.DateTimeUtc,
   startedAt: Schema.optional(Schema.DateTimeUtc),
   completedAt: Schema.optional(Schema.DateTimeUtc),
-  reason: Schema.optional(Schema.String),
+  failure: Schema.optional(WorkflowExecutionFailure),
 }).annotate({ identifier: "WorkflowStepInstance" });
 
 export type WorkflowStepInstance = typeof WorkflowStepInstance.Type;

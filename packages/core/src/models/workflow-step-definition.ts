@@ -97,6 +97,15 @@ export const ControlStepDefinition = Schema.Union([
 export type ControlStepDefinition = typeof ControlStepDefinition.Type;
 
 /**
+ * Defines how a task step is retried when it fails.
+ */
+export const TaskRetryDefinition = Schema.Struct({
+  maxAttempts: Schema.Int,
+  delayMs: Schema.Number,
+}).annotate({ identifier: "TaskRetryDefinition" });
+export type TaskRetryDefinition = typeof TaskRetryDefinition.Type;
+
+/**
  * An executable workflow step.
  *
  * `taskId` identifies an implementation in the task registry. A task
@@ -110,6 +119,7 @@ export const TaskStepDefinition = WorkflowStepDefinitionBase.pipe(
     _type: Schema.Literal("task"),
     taskId: TaskId,
     inputs: Schema.Record(Schema.String, ValueExpression),
+    retry: Schema.optional(TaskRetryDefinition),
   }),
 ).annotate({ identifier: "TaskStepDefinition" });
 export type TaskStepDefinition = typeof TaskStepDefinition.Type;

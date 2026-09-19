@@ -1,13 +1,15 @@
 import { Schema } from "effect";
 
 import { WorkflowInstanceId } from "./ids.ts";
+import { WorkflowExecutionFailure } from "./workflow-execution-failure.ts";
 import { WorkflowInstanceTrigger } from "./workflow-instance-trigger.ts";
 
 export enum WorkflowInstanceStatusEnum {
   Pending = "Pending",
   Running = "Running",
-  Completed = "Completed",
+  Succeeded = "Succeeded",
   Failed = "Failed",
+  Cancelled = "Cancelled",
 }
 
 export const WorkflowInstanceStatus = Schema.Enum(WorkflowInstanceStatusEnum).annotate({
@@ -25,7 +27,7 @@ export const WorkflowInstance = Schema.Struct({
   createdAt: Schema.DateTimeUtc,
   startedAt: Schema.optional(Schema.DateTimeUtc),
   completedAt: Schema.optional(Schema.DateTimeUtc),
-  reason: Schema.optional(Schema.String),
+  failure: Schema.optional(WorkflowExecutionFailure),
 }).annotate({ identifier: "WorkflowInstance" });
 
 export type WorkflowInstance = typeof WorkflowInstance.Type;

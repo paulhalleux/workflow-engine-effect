@@ -26,6 +26,6 @@ export type WorkflowInstanceId = typeof WorkflowInstanceId.Type;
 export const WorkflowStepInstanceId = Schema.String.pipe(Schema.brand("WorkflowStepInstanceId"));
 export type WorkflowStepInstanceId = typeof WorkflowStepInstanceId.Type;
 
-// TriggerInstance
-export const TriggerInstanceId = Schema.String.pipe(Schema.brand("TriggerInstanceId"));
-export type TriggerInstanceId = typeof TriggerInstanceId.Type;
+// WorkflowTaskAttempt
+export const WorkflowTaskAttemptId = Schema.String.pipe(Schema.brand("WorkflowTaskAttemptId"));
+export type WorkflowTaskAttemptId = typeof WorkflowTaskAttemptId.Type;
