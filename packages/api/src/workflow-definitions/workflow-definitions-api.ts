@@ -9,7 +9,10 @@ import {
   WorkflowDefinitionVersionBumpingErrorProblem,
 } from "./errors.ts";
 
-const CreatedWorkflowDefinition = WorkflowDefinitionEntry.pipe(HttpApiSchema.status(201));
+const CreatedWorkflowDefinition = WorkflowDefinitionEntry.pipe(
+  HttpApiSchema.status(201),
+  (schema) => schema.annotate({ identifier: "CreatedWorkflowDefinition" }),
+);
 
 /**
  * HTTP API for managing workflow definitions.

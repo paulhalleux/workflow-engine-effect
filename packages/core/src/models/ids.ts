@@ -17,3 +17,15 @@ export type WorkflowStepOutputId = typeof WorkflowStepOutputId.Type;
 // TriggerDefinition
 export const TriggerDefinitionId = Schema.String.pipe(Schema.brand("TriggerDefinitionId"));
 export type TriggerDefinitionId = typeof TriggerDefinitionId.Type;
+
+// WorkflowInstance
+export const WorkflowInstanceId = Schema.String.pipe(Schema.brand("WorkflowInstanceId"));
+export type WorkflowInstanceId = typeof WorkflowInstanceId.Type;
+
+// WorkflowStepInstance
+export const WorkflowStepInstanceId = Schema.String.pipe(Schema.brand("WorkflowStepInstanceId"));
+export type WorkflowStepInstanceId = typeof WorkflowStepInstanceId.Type;
+
+// TriggerInstance
+export const TriggerInstanceId = Schema.String.pipe(Schema.brand("TriggerInstanceId"));
+export type TriggerInstanceId = typeof TriggerInstanceId.Type;

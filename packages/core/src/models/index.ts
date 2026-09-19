@@ -6,3 +6,6 @@ export * from "./transition-definition.ts";
 export * from "./value-expression.ts";
 export * from "./ids.ts";
 export * from "./trigger-definition.ts";
+export * from "./workflow-instance.ts";
+export * from "./workflow-step-instance.ts";
+export * from "./workflow-instance-trigger.ts";
