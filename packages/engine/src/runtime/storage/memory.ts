@@ -8,7 +8,11 @@ import {
 } from "@workflow/core";
 import { Effect, Layer, Ref } from "effect";
 
-import { WorkflowInstanceNotFound, WorkflowTaskAttemptNotFound } from "../errors.ts";
+import {
+  WorkflowInstanceNotFound,
+  WorkflowStepInstanceNotFound,
+  WorkflowTaskAttemptNotFound,
+} from "../errors.ts";
 import { WorkflowRuntimeRepository } from "../workflow-runtime-repository.ts";
 
 interface RuntimeState {
@@ -69,6 +73,17 @@ export const WorkflowRuntimeRepositoryMemory = Layer.effect(
 
           return [undefined, { ...current, steps: next }] as const;
         }),
+
+      getStepInstance: (id) =>
+        Ref.get(state).pipe(
+          Effect.flatMap((current) => {
+            const instance = current.steps.get(id);
+            if (!instance) {
+              return Effect.fail(new WorkflowStepInstanceNotFound({ id }));
+            }
+            return Effect.succeed(instance);
+          }),
+        ),
 
       createTaskAttempt: (attempt) =>
         Ref.modify(state, (current) => {

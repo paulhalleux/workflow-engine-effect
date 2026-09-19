@@ -1,11 +1,8 @@
 import { TaskId } from "@workflow/core";
-import { Context, Effect, Layer, Ref, Schema } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
 
+import { TaskNotFound } from "./errors.ts";
 import { Task } from "./task.ts";
-
-export class TaskNotFound extends Schema.TaggedError<TaskNotFound>()("TaskNotFound", {
-  taskId: TaskId,
-}) {}
 
 export class TaskRegistry extends Context.Service<
   TaskRegistry,
@@ -19,23 +16,14 @@ export class TaskRegistry extends Context.Service<
     readonly get: (taskId: TaskId) => Effect.Effect<Task, TaskNotFound>;
   }
 >()("@workflow/engine/TaskRegistry") {
-  static readonly memory = Layer.effect(
-    TaskRegistry,
-    Effect.gen(function* () {
-      const tasks = yield* Ref.make(new Map<TaskId, Task>());
-
-      return TaskRegistry.of({
-        get: (taskId) =>
-          Ref.get(tasks).pipe(
-            Effect.flatMap((current) => {
-              const task = current.get(taskId);
-              if (!task) {
-                return Effect.fail(new TaskNotFound({ taskId }));
-              }
-              return Effect.succeed(task);
-            }),
-          ),
-      });
-    }),
-  );
+  static readonly make = (tasks: ReadonlyMap<TaskId, Task>) =>
+    Layer.succeed(
+      TaskRegistry,
+      TaskRegistry.of({
+        get: (taskId) => {
+          const task = tasks.get(taskId);
+          return task ? Effect.succeed(task) : Effect.fail(new TaskNotFound({ id: taskId }));
+        },
+      }),
+    );
 }

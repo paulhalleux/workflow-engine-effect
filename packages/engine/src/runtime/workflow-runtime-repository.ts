@@ -2,6 +2,7 @@ import {
   WorkflowInstance,
   WorkflowInstanceId,
   WorkflowStepInstance,
+  WorkflowStepInstanceId,
   WorkflowTaskAttempt,
   WorkflowTaskAttemptId,
 } from "@workflow/core";
@@ -10,6 +11,7 @@ import { Context, Effect } from "effect";
 import {
   WorkflowInstanceNotFound,
   WorkflowRuntimeStorageError,
+  WorkflowStepInstanceNotFound,
   WorkflowTaskAttemptNotFound,
 } from "./errors.ts";
 
@@ -60,6 +62,18 @@ export class WorkflowRuntimeRepository extends Context.Service<
     readonly updateStepInstance: (
       instance: WorkflowStepInstance,
     ) => Effect.Effect<void, WorkflowRuntimeStorageError>;
+
+    /**
+     * Returns an existing workflow step instance.
+     *
+     * @param id - Workflow step instance identifier.
+     */
+    readonly getStepInstance: (
+      id: WorkflowStepInstanceId,
+    ) => Effect.Effect<
+      WorkflowStepInstance,
+      WorkflowRuntimeStorageError | WorkflowStepInstanceNotFound
+    >;
 
     /**
      * Lists all workflow step instances for a given workflow instance.
